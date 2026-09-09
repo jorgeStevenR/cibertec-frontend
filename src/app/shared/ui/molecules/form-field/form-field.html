@@ -1,5 +1,5 @@
 <div class="field">
-  <label [for]="inputId()">{{ label() }}</label>
+  <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}</label>
   <ui-input
     [inputId]="inputId()"
     [type]="type()"

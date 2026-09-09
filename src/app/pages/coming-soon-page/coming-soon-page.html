@@ -1,0 +1,17 @@
+<div class="stage">
+  <div class="panel">
+    <div class="mark-row">
+      <div class="mark"></div>
+      <span>CIBERCTEC</span>
+    </div>
+
+    <h1>Hola, {{ usuario?.nombre }}</h1>
+    <p class="sub">Sesión iniciada como {{ usuario?.email }} ({{ usuario?.rol }}).</p>
+    <p class="note">
+      Tu panel para {{ rolLabel }} todavía está en construcción. Muy pronto vas a poder entrar
+      aquí para ver tus cursos y actividades.
+    </p>
+
+    <ui-button (pressed)="cerrarSesion()">Cerrar sesión</ui-button>
+  </div>
+</div>

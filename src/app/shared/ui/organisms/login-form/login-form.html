@@ -3,20 +3,22 @@
     label="Correo electrónico"
     inputId="email"
     type="email"
-    placeholder="tu@correo.com"
+    placeholder="Correo electrónico"
     autocomplete="email"
     [control]="form.controls.email"
     errorMessage="Ingresa un correo válido"
+    [hideLabel]="true"
   ></form-field>
 
   <form-field
     label="Contraseña"
     inputId="password"
     type="password"
-    placeholder="••••••••"
+    placeholder="Contraseña"
     autocomplete="current-password"
     [control]="form.controls.password"
     errorMessage="La contraseña debe tener al menos 6 caracteres"
+    [hideLabel]="true"
   ></form-field>
 
   <p class="server-error" *ngIf="serverError()">{{ serverError() }}</p>
@@ -24,4 +26,6 @@
   <ui-button type="submit" [loading]="loading()" [success]="success()">
     Iniciar sesión
   </ui-button>
+
+  <button type="button" class="forgot-link">¿Olvidaste tu contraseña?</button>
 </form>

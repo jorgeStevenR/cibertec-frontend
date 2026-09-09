@@ -1,20 +1,42 @@
-<div class="stage">
-  <div class="vanta-host" #vantaHost></div>
+<div class="page" [class.leaving]="success()">
+  <div class="stage">
+    <div class="brand-panel">
+      <div class="mark-row">
+        <div class="mark"></div>
+        <span>CIBERCTEC</span>
+      </div>
 
-  <div class="card">
-    <div class="mark-row">
-      <div class="mark"></div>
-      <span>CIBERCTEC</span>
+      <h1>
+        Aprende, enseña y <span class="accent">gestiona</span><br />
+        todo en un solo <span class="accent">lugar</span>.
+      </h1>
+
+      <p class="tagline">La plataforma de Cibertec para estudiantes, docentes y administradores.</p>
     </div>
 
-    <h1 #headline>Acceso seguro</h1>
-    <p class="sub">Ingresa tus credenciales de administrador para continuar.</p>
+    <div class="form-panel">
+      <div class="card">
+        <login-form
+          [loading]="loading()"
+          [success]="success()"
+          [serverError]="serverError()"
+          (submitted)="onSubmit($event)"
+        ></login-form>
 
-    <login-form
-      [loading]="loading()"
-      [success]="success()"
-      [serverError]="serverError()"
-      (submitted)="onSubmit($event)"
-    ></login-form>
+        <p class="hint">Ingresa con tu correo institucional de Cibertec.</p>
+      </div>
+    </div>
   </div>
+
+  <footer class="site-footer">
+    <div class="footer-row contact">
+      <span>Villavicencio: 670 3778 · 673 0074 · 321 373 6926</span>
+      <span>San José del Guaviare: 584 9103 · 321 373 6829</span>
+      <span>Acacias: 311 293 0428</span>
+    </div>
+    <div class="footer-row support">
+      ¿Necesitas ayuda con tu usuario o contraseña? Escríbenos a
+      <a href="mailto:recursostecnologicos@ciberctec.edu.co">recursostecnologicos@ciberctec.edu.co</a>
+    </div>
+  </footer>
 </div>
