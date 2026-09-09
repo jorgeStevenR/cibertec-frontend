@@ -1,0 +1,61 @@
+.ui-button {
+  position: relative;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(100deg, var(--bright, #1a8fd1), var(--cyan, #4fd8e6));
+  color: #06121d;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.75;
+  }
+}
+
+.label.hidden {
+  opacity: 0;
+  position: absolute;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(6, 18, 29, 0.3);
+  border-top-color: #06121d;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.check {
+  width: 16px;
+  height: 16px;
+
+  circle {
+    fill: none;
+    stroke: #06121d;
+    stroke-width: 2;
+  }
+
+  path {
+    fill: none;
+    stroke: #06121d;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}

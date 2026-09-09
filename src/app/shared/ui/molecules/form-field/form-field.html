@@ -1,0 +1,12 @@
+<div class="field">
+  <label [for]="inputId()">{{ label() }}</label>
+  <ui-input
+    [inputId]="inputId()"
+    [type]="type()"
+    [placeholder]="placeholder()"
+    [autocomplete]="autocomplete()"
+    [invalid]="invalido"
+    [formControl]="control()"
+  ></ui-input>
+  <p class="field-error" *ngIf="invalido && errorMessage()">{{ errorMessage() }}</p>
+</div>

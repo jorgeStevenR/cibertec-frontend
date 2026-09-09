@@ -1,0 +1,17 @@
+<div class="stage">
+  <div class="panel">
+    <div class="mark-row">
+      <div class="mark"></div>
+      <span>CIBERCTEC — Panel administrador</span>
+    </div>
+
+    <h1>Bienvenido, {{ usuario?.nombre }}</h1>
+    <p class="sub">Sesión iniciada como {{ usuario?.email }} ({{ usuario?.rol }}).</p>
+    <p class="note">
+      Esta es la entrada al panel de administrador. Los módulos de gestión (usuarios, cursos,
+      matrículas) se irán agregando aquí en las próximas semanas.
+    </p>
+
+    <ui-button (pressed)="cerrarSesion()">Cerrar sesión</ui-button>
+  </div>
+</div>

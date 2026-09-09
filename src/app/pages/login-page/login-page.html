@@ -1,0 +1,20 @@
+<div class="stage">
+  <div class="vanta-host" #vantaHost></div>
+
+  <div class="card">
+    <div class="mark-row">
+      <div class="mark"></div>
+      <span>CIBERCTEC</span>
+    </div>
+
+    <h1 #headline>Acceso seguro</h1>
+    <p class="sub">Ingresa tus credenciales de administrador para continuar.</p>
+
+    <login-form
+      [loading]="loading()"
+      [success]="success()"
+      [serverError]="serverError()"
+      (submitted)="onSubmit($event)"
+    ></login-form>
+  </div>
+</div>

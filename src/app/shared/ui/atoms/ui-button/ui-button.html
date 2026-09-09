@@ -1,0 +1,17 @@
+<button
+  [type]="type()"
+  class="ui-button"
+  [disabled]="disabled() || loading()"
+  (click)="onClick()"
+>
+  <span class="label" [class.hidden]="loading() || success()">
+    <ng-content></ng-content>
+  </span>
+
+  <span class="spinner" *ngIf="loading()"></span>
+
+  <svg *ngIf="success()" class="check" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M7 12.5l3 3 7-7" />
+  </svg>
+</button>
