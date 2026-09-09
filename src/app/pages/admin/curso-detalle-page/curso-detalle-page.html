@@ -1,0 +1,145 @@
+<a class="back-link" routerLink="/admin/cursos">← Volver a cursos</a>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<ng-container *ngIf="curso() as c">
+  <div class="page-header">
+    <div>
+      <h1>{{ c.titulo }}</h1>
+      <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
+      <p class="meta">Profesor: {{ nombreProfesor(c.profesorId) }}</p>
+    </div>
+    <ui-button
+      variant="secondary"
+      [fullWidth]="false"
+      [loading]="actualizandoEstado()"
+      (pressed)="togglePublicado()"
+    >
+      {{ c.publicado ? 'Despublicar' : 'Publicar' }}
+    </ui-button>
+  </div>
+</ng-container>
+
+<div class="tabs">
+  <button type="button" [class.active]="tabActiva() === 'modulos'" (click)="tabActiva.set('modulos')">
+    Módulos
+  </button>
+  <button type="button" [class.active]="tabActiva() === 'matriculas'" (click)="tabActiva.set('matriculas')">
+    Matrículas
+  </button>
+</div>
+
+<div *ngIf="tabActiva() === 'modulos'">
+  <div class="section-header">
+    <h2>Módulos del curso</h2>
+    <ui-button [fullWidth]="false" (pressed)="abrirCrearModulo()">Nuevo módulo</ui-button>
+  </div>
+
+  <data-table
+    [columns]="moduloColumnas"
+    [rows]="modulos()"
+    [loading]="cargando()"
+    emptyMessage="Este curso todavía no tiene módulos."
+  >
+    <ng-template #actions let-modulo>
+      <ui-button
+        variant="secondary"
+        [fullWidth]="false"
+        [routerLink]="['/admin', 'cursos', cursoId, 'modulos', modulo.id]"
+      >
+        Ver contenidos
+      </ui-button>
+      <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarModulo(modulo)">
+        Editar
+      </ui-button>
+      <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarModulo(modulo)">
+        Eliminar
+      </ui-button>
+    </ng-template>
+  </data-table>
+</div>
+
+<div *ngIf="tabActiva() === 'matriculas'">
+  <div class="section-header">
+    <h2>Estudiantes matriculados</h2>
+    <ui-button [fullWidth]="false" (pressed)="abrirMatricular()">Matricular estudiante</ui-button>
+  </div>
+
+  <data-table
+    [columns]="matriculaColumnas"
+    [rows]="matriculas()"
+    [loading]="cargando()"
+    emptyMessage="Todavía no hay estudiantes matriculados en este curso."
+  >
+    <ng-template #actions let-matricula>
+      <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarMatricula(matricula)">
+        Quitar
+      </ui-button>
+    </ng-template>
+  </data-table>
+</div>
+
+<ui-modal
+  [open]="moduloModalAbierto()"
+  [title]="moduloModoEdicion() ? 'Editar módulo' : 'Nuevo módulo'"
+  (closed)="cerrarModalModulo()"
+>
+  <form [formGroup]="moduloForm" (ngSubmit)="guardarModulo()" novalidate class="modal-form">
+    <form-field
+      label="Título"
+      inputId="modulo-titulo"
+      [control]="moduloForm.controls.titulo"
+      errorMessage="El título es obligatorio"
+    ></form-field>
+
+    <form-field
+      label="Orden"
+      inputId="modulo-orden"
+      type="number"
+      [control]="moduloForm.controls.orden"
+      errorMessage="Ingresa un orden válido"
+    ></form-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalModulo()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardandoModulo()">Guardar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<ui-modal [open]="matriculaModalAbierto()" title="Matricular estudiante" (closed)="cerrarModalMatricula()">
+  <form [formGroup]="matriculaForm" (ngSubmit)="matricular()" novalidate class="modal-form">
+    <select-field
+      label="Estudiante"
+      inputId="estudianteId"
+      [control]="matriculaForm.controls.estudianteId"
+      [options]="estudiantesDisponibles"
+      errorMessage="Selecciona un estudiante"
+    ></select-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalMatricula()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="matriculando()">Matricular</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarModuloAbierto()"
+  title="Eliminar módulo"
+  [message]="'¿Seguro que quieres eliminar el módulo \'' + (moduloAEliminar()?.titulo ?? '') + '\'? Se eliminarán también sus contenidos.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminandoModulo()"
+  (confirmed)="confirmarEliminarModulo()"
+  (cancelled)="confirmEliminarModuloAbierto.set(false)"
+></confirm-dialog>
+
+<confirm-dialog
+  [open]="confirmEliminarMatriculaAbierto()"
+  title="Quitar matrícula"
+  [message]="'¿Seguro que quieres quitar a ' + nombreEstudiante(matriculaAEliminar()?.estudianteId ?? -1) + ' de este curso?'"
+  confirmLabel="Quitar"
+  [loading]="eliminandoMatricula()"
+  (confirmed)="confirmarEliminarMatricula()"
+  (cancelled)="confirmEliminarMatriculaAbierto.set(false)"
+></confirm-dialog>

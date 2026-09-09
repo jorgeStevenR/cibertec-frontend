@@ -10,6 +10,25 @@ export interface Usuario {
   fechaCreacion: string;
 }
 
+export interface UsuarioCrearRequest {
+  nombre: string;
+  apellido: string;
+  email: string;
+  password: string;
+  rol: Rol;
+}
+
+export interface UsuarioActualizarRequest {
+  nombre: string;
+  apellido: string;
+  rol: Rol;
+  activo: boolean;
+}
+
+export interface ResetearPasswordResponse {
+  passwordTemporal: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

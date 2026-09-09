@@ -1,17 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
-import { UiButton } from '../../shared/ui/atoms/ui-button/ui-button';
-import { AuthService } from '../../core/services/auth.service';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-admin-entry-page',
+  selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, UiButton],
-  templateUrl: './admin-entry-page.html',
-  styleUrl: './admin-entry-page.scss',
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  templateUrl: './admin-layout.html',
+  styleUrl: './admin-layout.scss',
 })
-export class AdminEntryPage {
+export class AdminLayout {
   constructor(
     private readonly auth: AuthService,
     private readonly router: Router,

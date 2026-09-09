@@ -1,0 +1,11 @@
+<div class="backdrop" *ngIf="open()" (click)="onBackdropClick()">
+  <div class="panel" (click)="$event.stopPropagation()">
+    <div class="panel-header" *ngIf="title()">
+      <h2>{{ title() }}</h2>
+      <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="panel-body">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</div>

@@ -16,7 +16,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 })
 export class UiInput implements ControlValueAccessor {
   readonly inputId = input('');
-  readonly type = input<'text' | 'email' | 'password'>('text');
+  readonly type = input<'text' | 'email' | 'password' | 'number'>('text');
   readonly placeholder = input('');
   readonly autocomplete = input('off');
   readonly invalid = input(false);

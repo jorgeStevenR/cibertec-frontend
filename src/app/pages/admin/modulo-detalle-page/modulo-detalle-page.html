@@ -1,0 +1,85 @@
+<a class="back-link" [routerLink]="['/admin', 'cursos', cursoId]">← Volver al curso</a>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<div class="page-header">
+  <div>
+    <h1>{{ modulo()?.titulo }}</h1>
+    <p class="subtitle" *ngIf="curso() as c">Curso: {{ c.titulo }}</p>
+  </div>
+  <div class="header-actions">
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEnlace()">Agregar enlace</ui-button>
+    <ui-button [fullWidth]="false" (pressed)="abrirSubir()">Subir archivo</ui-button>
+  </div>
+</div>
+
+<data-table
+  [columns]="columnas"
+  [rows]="contenidos()"
+  [loading]="cargando()"
+  emptyMessage="Este módulo todavía no tiene contenidos."
+>
+  <ng-template #actions let-contenido>
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="ver(contenido)">Ver</ui-button>
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="toggleVisibilidad(contenido)">
+      {{ contenido.visible ? 'Ocultar' : 'Mostrar' }}
+    </ui-button>
+    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(contenido)">Eliminar</ui-button>
+  </ng-template>
+</data-table>
+
+<ui-modal [open]="subirModalAbierto()" title="Subir archivo" (closed)="cerrarModalSubir()">
+  <form [formGroup]="subirForm" (ngSubmit)="subirArchivo()" novalidate class="modal-form">
+    <select-field
+      label="Tipo de contenido"
+      inputId="tipo-archivo"
+      [control]="subirForm.controls.tipo"
+      [options]="opcionesTipoArchivo"
+      errorMessage="Selecciona el tipo de archivo"
+    ></select-field>
+
+    <div class="field">
+      <label for="archivo">Archivo</label>
+      <input type="file" id="archivo" (change)="onArchivoSeleccionado($event)" />
+      <p class="field-error" *ngIf="archivoFaltante()">Selecciona un archivo</p>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalSubir()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="subiendo()">Subir</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<ui-modal [open]="enlaceModalAbierto()" title="Agregar enlace" (closed)="cerrarModalEnlace()">
+  <form [formGroup]="enlaceForm" (ngSubmit)="agregarEnlace()" novalidate class="modal-form">
+    <form-field
+      label="Nombre"
+      inputId="enlace-nombre"
+      [control]="enlaceForm.controls.nombre"
+      errorMessage="El nombre es obligatorio"
+    ></form-field>
+
+    <form-field
+      label="URL"
+      inputId="enlace-url"
+      [control]="enlaceForm.controls.url"
+      errorMessage="La URL es obligatoria"
+    ></form-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalEnlace()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardandoEnlace()">Agregar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar contenido"
+  [message]="'¿Seguro que quieres eliminar \'' + (contenidoAEliminar()?.nombre ?? '') + '\'? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

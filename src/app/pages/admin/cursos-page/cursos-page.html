@@ -1,0 +1,82 @@
+<div class="page-header">
+  <div>
+    <h1>Cursos</h1>
+    <p class="subtitle">Crea cursos y asígnalos a un profesor.</p>
+  </div>
+  <ui-button [fullWidth]="false" (pressed)="abrirCrear()">Nuevo curso</ui-button>
+</div>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<data-table
+  [columns]="columnas"
+  [rows]="cursos()"
+  [loading]="cargando()"
+  emptyMessage="Todavía no hay cursos creados."
+>
+  <ng-template #actions let-curso>
+    <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', curso.id]">
+      Ver módulos
+    </ui-button>
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(curso)">Editar</ui-button>
+    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(curso)">Eliminar</ui-button>
+  </ng-template>
+</data-table>
+
+<ui-pagination
+  [pagina]="pagina()"
+  [totalPaginas]="totalPaginas()"
+  [totalElementos]="totalElementos()"
+  (cambiarPagina)="cambiarPagina($event)"
+></ui-pagination>
+
+<ui-modal
+  [open]="modalAbierto()"
+  [title]="modoEdicion() ? 'Editar curso' : 'Nuevo curso'"
+  (closed)="cerrarModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="modal-form">
+    <form-field
+      label="Título"
+      inputId="titulo"
+      [control]="form.controls.titulo"
+      errorMessage="El título es obligatorio"
+    ></form-field>
+
+    <textarea-field
+      label="Descripción"
+      inputId="descripcion"
+      [control]="form.controls.descripcion"
+      [rows]="4"
+    ></textarea-field>
+
+    <select-field
+      *ngIf="!modoEdicion()"
+      label="Profesor"
+      inputId="profesorId"
+      [control]="form.controls.profesorId"
+      [options]="opcionesProfesor"
+      errorMessage="Selecciona un profesor"
+    ></select-field>
+
+    <label class="checkbox-row" *ngIf="modoEdicion()">
+      <input type="checkbox" [formControl]="form.controls.publicado" />
+      Curso publicado
+    </label>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">Guardar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar curso"
+  [message]="'¿Seguro que quieres eliminar \'' + (cursoAEliminar()?.titulo ?? '') + '\'? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

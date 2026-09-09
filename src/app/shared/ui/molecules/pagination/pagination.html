@@ -1,0 +1,8 @@
+<div class="pagination" *ngIf="totalPaginas() > 1">
+  <span class="summary">{{ totalElementos() }} en total · página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
+
+  <div class="controls">
+    <button type="button" [disabled]="pagina() === 0" (click)="anterior()">← Anterior</button>
+    <button type="button" [disabled]="pagina() >= totalPaginas() - 1" (click)="siguiente()">Siguiente →</button>
+  </div>
+</div>

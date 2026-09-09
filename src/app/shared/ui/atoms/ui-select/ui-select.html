@@ -1,0 +1,12 @@
+<select
+  [id]="inputId()"
+  [disabled]="disabled"
+  [class.invalid]="invalid()"
+  (change)="onSelect($event)"
+  (blur)="onBlur()"
+>
+  <option value="" disabled [selected]="!value">{{ placeholder() }}</option>
+  <option *ngFor="let opcion of options()" [value]="opcion.value" [selected]="opcion.value === value">
+    {{ opcion.label }}
+  </option>
+</select>

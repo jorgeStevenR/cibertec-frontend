@@ -13,6 +13,8 @@ export class UiButton {
   readonly disabled = input(false);
   readonly loading = input(false);
   readonly success = input(false);
+  readonly variant = input<'primary' | 'secondary' | 'danger'>('primary');
+  readonly fullWidth = input(true);
   readonly pressed = output<void>();
 
   onClick(): void {

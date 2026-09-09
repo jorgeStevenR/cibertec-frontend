@@ -1,0 +1,33 @@
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th *ngFor="let col of columns()">{{ col.label }}</th>
+        <th *ngIf="actionsTpl">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngIf="loading()">
+        <td [attr.colspan]="columns().length + (actionsTpl ? 1 : 0)" class="state-cell">Cargando…</td>
+      </tr>
+      <ng-container *ngIf="!loading()">
+        <tr *ngIf="rows().length === 0">
+          <td [attr.colspan]="columns().length + (actionsTpl ? 1 : 0)" class="state-cell">{{ emptyMessage() }}</td>
+        </tr>
+        <tr *ngFor="let row of rows()">
+          <td *ngFor="let col of columns()">
+            <ng-container *ngIf="col.badge; else plainCell">
+              <span class="badge" [class.badge-on]="col.badge(row)">
+                {{ col.badge(row) ? (col.badgeLabels?.[0] ?? 'Sí') : (col.badgeLabels?.[1] ?? 'No') }}
+              </span>
+            </ng-container>
+            <ng-template #plainCell>{{ cellValue(row, col) }}</ng-template>
+          </td>
+          <td *ngIf="actionsTpl" class="actions-cell">
+            <ng-container *ngTemplateOutlet="actionsTpl; context: { $implicit: row }"></ng-container>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,25 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"></div>
+      <span>CIBERCTEC</span>
+    </div>
+
+    <nav>
+      <a routerLink="/admin/usuarios" routerLinkActive="active">Usuarios</a>
+      <a routerLink="/admin/cursos" routerLinkActive="active">Cursos</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <span class="user-name">{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
+        <span class="user-email">{{ usuario?.email }}</span>
+      </div>
+      <button type="button" class="logout-btn" (click)="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

@@ -1,0 +1,11 @@
+<div class="field">
+  <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}</label>
+  <ui-textarea
+    [inputId]="inputId()"
+    [placeholder]="placeholder()"
+    [rows]="rows()"
+    [invalid]="invalido"
+    [formControl]="control()"
+  ></ui-textarea>
+  <p class="field-error" *ngIf="invalido && errorMessage()">{{ errorMessage() }}</p>
+</div>

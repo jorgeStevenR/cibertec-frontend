@@ -1,0 +1,9 @@
+<ui-modal [open]="open()" [title]="title()" (closed)="cancelled.emit()">
+  <p class="message">{{ message() }}</p>
+  <div class="actions">
+    <button type="button" class="cancel-btn" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
+    <ui-button [variant]="variant()" [fullWidth]="false" [loading]="loading()" (pressed)="confirmed.emit()">
+      {{ confirmLabel() }}
+    </ui-button>
+  </div>
+</ui-modal>

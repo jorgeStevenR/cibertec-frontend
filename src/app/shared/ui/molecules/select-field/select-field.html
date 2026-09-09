@@ -1,0 +1,11 @@
+<div class="field">
+  <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}</label>
+  <ui-select
+    [inputId]="inputId()"
+    [options]="options()"
+    [placeholder]="placeholder()"
+    [invalid]="invalido"
+    [formControl]="control()"
+  ></ui-select>
+  <p class="field-error" *ngIf="invalido && errorMessage()">{{ errorMessage() }}</p>
+</div>

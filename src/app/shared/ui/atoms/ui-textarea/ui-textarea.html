@@ -1,0 +1,10 @@
+<textarea
+  [id]="inputId()"
+  [placeholder]="placeholder()"
+  [disabled]="disabled"
+  [rows]="rows()"
+  [value]="value"
+  [class.invalid]="invalid()"
+  (input)="onInput($event)"
+  (blur)="onBlur()"
+></textarea>
