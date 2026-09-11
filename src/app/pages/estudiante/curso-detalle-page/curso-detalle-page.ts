@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
+import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
+import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
@@ -36,7 +37,7 @@ type Tab = 'curso' | 'participantes';
 @Component({
   selector: 'app-estudiante-curso-detalle-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiAlert, UiButton, DataTable],
+  imports: [CommonModule, RouterLink, UiAlert, UiButton, DataTable, LienzoComponent, EmbedVideoUrlPipe],
   templateUrl: './curso-detalle-page.html',
   styleUrl: './curso-detalle-page.scss',
 })
@@ -49,7 +50,6 @@ export class EstudianteCursoDetallePage implements OnInit {
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
-  private readonly sanitizer = inject(DomSanitizer);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -76,6 +76,19 @@ export class EstudianteCursoDetallePage implements OnInit {
   readonly misEntregas = signal<Record<number, Entrega | null>>({});
   readonly archivosSeleccionados = signal<Record<number, File | null>>({});
   readonly entregando = signal<Record<number, boolean>>({});
+
+  readonly personajeImagenUrls = signal<Record<number, string>>({});
+  readonly personajeFraseIndice = signal<Record<number, number>>({});
+
+  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string } | null>(null);
+
+  abrirLienzo(moduloId: number, titulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo });
+  }
+
+  cerrarLienzo(): void {
+    this.lienzoAbierto.set(null);
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -145,6 +158,8 @@ export class EstudianteCursoDetallePage implements OnInit {
             }));
             this.modulos.set(modulosConDatos);
             this.cargarMisEntregas(modulosConDatos);
+            const personajes = modulosConDatos.flatMap((m) => m.bloques.filter((b) => b.tipo === 'PERSONAJE'));
+            this.cargarImagenesPersonaje(personajes);
           },
           error: (err: HttpErrorResponse) => {
             this.cargando.set(false);
@@ -232,9 +247,37 @@ export class EstudianteCursoDetallePage implements OnInit {
     });
   }
 
-  embedVideoUrl(url: string): SafeResourceUrl {
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
-    const embed = match ? `https://www.youtube.com/embed/${match[1]}` : url;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
+  private cargarImagenesPersonaje(bloques: Bloque[]): void {
+    for (const bloque of bloques) {
+      this.bloqueService.obtenerUrl(bloque.id).subscribe({
+        next: (respuesta) => {
+          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
+        },
+      });
+    }
   }
+
+  frasesPersonaje(bloque: Bloque): string[] {
+    return (bloque.texto ?? '')
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+  }
+
+  fraseActualPersonaje(bloque: Bloque): string {
+    const frases = this.frasesPersonaje(bloque);
+    if (frases.length === 0) {
+      return '';
+    }
+    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
+    return frases[Math.min(indice, frases.length - 1)];
+  }
+
+  siguienteFrasePersonaje(bloque: Bloque): void {
+    const frases = this.frasesPersonaje(bloque);
+    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
+    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
+    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
+  }
+
 }

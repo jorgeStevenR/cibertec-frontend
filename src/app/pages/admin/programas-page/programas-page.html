@@ -1,0 +1,86 @@
+<div class="page-header">
+  <div>
+    <h1>Programas</h1>
+    <p class="subtitle">Administra los programas académicos y cuántos semestres duran.</p>
+  </div>
+  <ui-button [fullWidth]="false" (pressed)="abrirCrear()">Nuevo programa</ui-button>
+</div>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<div class="search-row">
+  <input
+    type="text"
+    class="search-input"
+    placeholder="Buscar por nombre…"
+    (input)="onBusquedaInput($any($event.target).value)"
+  />
+</div>
+
+<data-table
+  [columns]="columnas"
+  [rows]="programas()"
+  [loading]="cargando()"
+  [emptyMessage]="busqueda() ? 'No hay programas que coincidan con la búsqueda.' : 'Todavía no hay programas registrados.'"
+>
+  <ng-template #actions let-programa>
+    <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'programas', programa.id]">
+      Ver
+    </ui-button>
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(programa)">Editar</ui-button>
+    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(programa)">Eliminar</ui-button>
+  </ng-template>
+</data-table>
+
+<ui-pagination
+  [pagina]="pagina()"
+  [totalPaginas]="totalPaginas()"
+  [totalElementos]="totalElementos()"
+  (cambiarPagina)="cambiarPagina($event)"
+></ui-pagination>
+
+<ui-modal
+  [open]="modalAbierto()"
+  [title]="modoEdicion() ? 'Editar programa' : 'Nuevo programa'"
+  (closed)="cerrarModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="modal-form">
+    <form-field
+      label="Nombre"
+      inputId="programa-nombre"
+      [control]="form.controls.nombre"
+      errorMessage="El nombre es obligatorio"
+      placeholder="Ej. Ingeniería de Sistemas"
+    ></form-field>
+
+    <textarea-field
+      label="Descripción"
+      inputId="programa-descripcion"
+      [control]="form.controls.descripcion"
+      [rows]="3"
+    ></textarea-field>
+
+    <form-field
+      label="Duración (semestres)"
+      inputId="programa-duracion"
+      type="number"
+      [control]="form.controls.duracionSemestres"
+      errorMessage="Ingresa una duración válida"
+    ></form-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">Guardar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar programa"
+  [message]="'¿Seguro que quieres eliminar \'' + (programaAEliminar()?.nombre ?? '') + '\'? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

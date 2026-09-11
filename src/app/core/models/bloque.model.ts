@@ -1,4 +1,4 @@
-export type TipoBloque = 'TEXTO' | 'IMAGEN' | 'VIDEO' | 'ARCHIVO';
+export type TipoBloque = 'TEXTO' | 'IMAGEN' | 'VIDEO' | 'ARCHIVO' | 'PERSONAJE';
 
 export interface Bloque {
   id: number;

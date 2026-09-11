@@ -16,16 +16,19 @@ import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-ta
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { CursoService } from '../../../core/services/curso.service';
 import { UsuarioService } from '../../../core/services/usuario.service';
+import { ProgramaService } from '../../../core/services/programa.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Usuario } from '../../../core/models/usuario.model';
+import { Programa } from '../../../core/models/programa.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { formatearFecha } from '../../../core/utils/labels.util';
 
 const TAMANO_PAGINA = 20;
-// Los cursos se pagina de a 20, pero el dropdown de profesores necesita "todos"
-// para poder asignar cualquiera; el backend no ofrece un endpoint sin paginar,
-// así que pedimos una página grande de una sola vez.
+// Los cursos se pagina de a 20, pero los dropdowns de profesores/programas necesitan
+// "todos" para poder asignar cualquiera; el backend no ofrece un endpoint sin
+// paginar, así que pedimos una página grande de una sola vez.
 const TAMANO_LOOKUP_PROFESORES = 500;
+const TAMANO_LOOKUP_PROGRAMAS = 500;
 
 @Component({
   selector: 'app-cursos-page',
@@ -50,10 +53,12 @@ const TAMANO_LOOKUP_PROFESORES = 500;
 export class CursosPage implements OnInit {
   private readonly cursoService = inject(CursoService);
   private readonly usuarioService = inject(UsuarioService);
+  private readonly programaService = inject(ProgramaService);
   private readonly fb = inject(FormBuilder);
 
   readonly cursos = signal<Curso[]>([]);
   readonly profesores = signal<Usuario[]>([]);
+  readonly programas = signal<Programa[]>([]);
   readonly cargando = signal(false);
   readonly error = signal('');
 
@@ -73,6 +78,7 @@ export class CursosPage implements OnInit {
   readonly columnas: DataTableColumn<Curso>[] = [
     { key: 'titulo', label: 'Título' },
     { key: 'profesor', label: 'Profesor', format: (c) => this.nombreProfesor(c.profesorId) },
+    { key: 'programa', label: 'Programa', format: (c) => c.programaNombre ?? 'Sin programa asignado' },
     {
       key: 'publicado',
       label: 'Estado',
@@ -86,6 +92,7 @@ export class CursosPage implements OnInit {
     titulo: ['', [Validators.required]],
     descripcion: [''],
     profesorId: ['', [Validators.required]],
+    programaId: ['', [Validators.required]],
     publicado: [false],
   });
 
@@ -99,12 +106,14 @@ export class CursosPage implements OnInit {
     forkJoin({
       cursos: this.cursoService.listar({ pagina: this.pagina(), tamano: TAMANO_PAGINA }),
       usuarios: this.usuarioService.listar({ tamano: TAMANO_LOOKUP_PROFESORES }),
+      programas: this.programaService.listar({ tamano: TAMANO_LOOKUP_PROGRAMAS }),
     }).subscribe({
-      next: ({ cursos, usuarios }) => {
+      next: ({ cursos, usuarios, programas }) => {
         this.cursos.set(cursos.contenido);
         this.totalPaginas.set(cursos.totalPaginas);
         this.totalElementos.set(cursos.totalElementos);
         this.profesores.set(usuarios.contenido.filter((u) => u.rol === 'PROFESOR'));
+        this.programas.set(programas.contenido);
         this.cargando.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -128,10 +137,14 @@ export class CursosPage implements OnInit {
     return this.profesores().map((p) => ({ value: String(p.id), label: `${p.nombre} ${p.apellido}` }));
   }
 
+  get opcionesPrograma(): UiSelectOption[] {
+    return this.programas().map((p) => ({ value: String(p.id), label: p.nombre }));
+  }
+
   abrirCrear(): void {
     this.modoEdicion.set(false);
     this.cursoEditando.set(null);
-    this.form.reset({ titulo: '', descripcion: '', profesorId: '', publicado: false });
+    this.form.reset({ titulo: '', descripcion: '', profesorId: '', programaId: '', publicado: false });
     this.form.controls.profesorId.setValidators([Validators.required]);
     this.form.controls.profesorId.updateValueAndValidity();
     this.modalAbierto.set(true);
@@ -144,6 +157,7 @@ export class CursosPage implements OnInit {
       titulo: curso.titulo,
       descripcion: curso.descripcion,
       profesorId: String(curso.profesorId),
+      programaId: curso.programaId != null ? String(curso.programaId) : '',
       publicado: curso.publicado,
     });
     this.form.controls.profesorId.clearValidators();
@@ -171,11 +185,13 @@ export class CursosPage implements OnInit {
           titulo: valores.titulo!,
           descripcion: valores.descripcion ?? '',
           publicado: valores.publicado!,
+          programaId: Number(valores.programaId),
         })
       : this.cursoService.crear({
           titulo: valores.titulo!,
           descripcion: valores.descripcion ?? '',
           profesorId: Number(valores.profesorId),
+          programaId: Number(valores.programaId),
         });
 
     obs.subscribe({

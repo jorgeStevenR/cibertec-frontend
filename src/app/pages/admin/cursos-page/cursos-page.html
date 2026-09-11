@@ -59,6 +59,14 @@
       errorMessage="Selecciona un profesor"
     ></select-field>
 
+    <select-field
+      label="Programa"
+      inputId="programaId"
+      [control]="form.controls.programaId"
+      [options]="opcionesPrograma"
+      errorMessage="Selecciona un programa"
+    ></select-field>
+
     <label class="checkbox-row" *ngIf="modoEdicion()">
       <input type="checkbox" [formControl]="form.controls.publicado" />
       Curso publicado

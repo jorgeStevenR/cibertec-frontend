@@ -154,6 +154,7 @@ export class CursoDetallePage implements OnInit {
         titulo: curso.titulo,
         descripcion: curso.descripcion,
         publicado: !curso.publicado,
+        programaId: curso.programaId,
       })
       .subscribe({
         next: (actualizado) => {

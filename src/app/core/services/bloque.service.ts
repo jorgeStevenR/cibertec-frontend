@@ -27,6 +27,13 @@ export class BloqueService {
     return this.http.post<Bloque>(`${API_BASE_URL}/modulos/${moduloId}/bloques/archivo`, formData, { params });
   }
 
+  crearPersonaje(moduloId: number, imagen: File, texto: string): Observable<Bloque> {
+    const formData = new FormData();
+    formData.append('archivo', imagen);
+    formData.append('texto', texto);
+    return this.http.post<Bloque>(`${API_BASE_URL}/modulos/${moduloId}/bloques/personaje`, formData);
+  }
+
   actualizarTexto(id: number, texto: string): Observable<Bloque> {
     return this.http.put<Bloque>(`${API_BASE_URL}/bloques/${id}/texto`, { texto });
   }

@@ -9,6 +9,7 @@ export interface ListarCursosOpciones {
   pagina?: number;
   tamano?: number;
   profesorId?: number;
+  programaId?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +24,8 @@ export class CursoService {
 
     if (opciones.profesorId != null) {
       params = params.set('profesorId', opciones.profesorId);
+    } else if (opciones.programaId != null) {
+      params = params.set('programaId', opciones.programaId);
     }
 
     return this.http.get<PaginaResponse<Curso>>(this.base, { params });

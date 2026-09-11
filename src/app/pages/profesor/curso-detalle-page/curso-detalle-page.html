@@ -70,7 +70,19 @@
           </div>
         </div>
 
-        <div class="bloques-editor">
+        <div
+          class="bloques-editor"
+          tabindex="0"
+          [class.drop-active]="dragOverModuloId() === item.modulo.id"
+          (paste)="onPasteZona($event, item.modulo.id)"
+          (dragover)="onDragOverZona($event, item.modulo.id)"
+          (dragleave)="onDragLeaveZona(item.modulo.id)"
+          (drop)="onDropZona($event, item.modulo.id)"
+        >
+          <p class="dropzone-hint">
+            Haz clic aquí y pega (Ctrl+V) texto o una imagen, o arrastra un archivo — se agrega solo.
+          </p>
+
           <ul class="bloques-list" *ngIf="item.bloques.length > 0">
             <li
               *ngFor="let bloque of item.bloques"
@@ -116,7 +128,43 @@
                   </div>
 
                   <div *ngSwitchCase="'VIDEO'" class="bloque-video">
-                    <iframe [src]="embedVideoUrl(bloque.urlVideo!)" allowfullscreen></iframe>
+                    <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
+                  </div>
+
+                  <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
+                    <img
+                      *ngIf="personajeImagenUrls()[bloque.id] as url"
+                      [src]="url"
+                      [alt]="bloque.nombreArchivo ?? 'Personaje'"
+                      class="personaje-imagen"
+                    />
+                    <ng-container *ngIf="bloqueEditandoId() !== bloque.id; else editandoPersonajeTexto">
+                      <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
+                        {{ fraseActualPersonaje(bloque) }}
+                        <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
+                          {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
+                        </span>
+                      </button>
+                    </ng-container>
+                    <ng-template #editandoPersonajeTexto>
+                      <textarea
+                        class="bloque-textarea"
+                        rows="4"
+                        placeholder="Una frase por línea…"
+                        [value]="textoEditandoValor()"
+                        (input)="textoEditandoValor.set($any($event.target).value)"
+                      ></textarea>
+                      <div class="bloque-edit-actions">
+                        <button type="button" class="cancel-btn" (click)="cancelarEditarBloqueTexto()">Cancelar</button>
+                        <ui-button
+                          [fullWidth]="false"
+                          [loading]="guardandoBloque()"
+                          (pressed)="guardarEdicionBloqueTexto(item.modulo.id)"
+                        >
+                          Guardar
+                        </ui-button>
+                      </div>
+                    </ng-template>
                   </div>
                 </ng-container>
               </div>
@@ -131,7 +179,7 @@
                   Ver
                 </ui-button>
                 <ui-button
-                  *ngIf="bloque.tipo === 'TEXTO' && bloqueEditandoId() !== bloque.id"
+                  *ngIf="(bloque.tipo === 'TEXTO' || bloque.tipo === 'PERSONAJE') && bloqueEditandoId() !== bloque.id"
                   variant="secondary"
                   [fullWidth]="false"
                   (pressed)="abrirEditarBloqueTexto(bloque)"
@@ -146,55 +194,10 @@
           </ul>
 
           <div class="bloques-toolbar">
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarTexto(item.modulo.id)">
-              + Texto
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarBloque(item.modulo.id)">
+              + Agregar contenido
             </ui-button>
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarVideo(item.modulo.id)">
-              + Video
-            </ui-button>
-            <label class="file-btn">
-              + Imagen
-              <input
-                type="file"
-                accept="image/*"
-                (change)="onArchivoBloqueSeleccionado($event, item.modulo.id, 'IMAGEN')"
-              />
-            </label>
-            <label class="file-btn">
-              + Archivo
-              <input type="file" (change)="onArchivoBloqueSeleccionado($event, item.modulo.id, 'ARCHIVO')" />
-            </label>
             <span *ngIf="subiendoArchivoBloque() === item.modulo.id" class="subiendo-msg">Subiendo…</span>
-          </div>
-
-          <div class="bloque-nuevo-form" *ngIf="agregandoTextoEnModulo() === item.modulo.id">
-            <textarea
-              rows="3"
-              placeholder="Escribe el contenido…"
-              [value]="nuevoTextoValor()"
-              (input)="nuevoTextoValor.set($any($event.target).value)"
-            ></textarea>
-            <div class="bloque-edit-actions">
-              <button type="button" class="cancel-btn" (click)="cancelarAgregarTexto()">Cancelar</button>
-              <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoTexto(item.modulo.id)">
-                Agregar
-              </ui-button>
-            </div>
-          </div>
-
-          <div class="bloque-nuevo-form" *ngIf="agregandoVideoEnModulo() === item.modulo.id">
-            <input
-              type="text"
-              placeholder="URL de YouTube"
-              [value]="nuevoVideoValor()"
-              (input)="nuevoVideoValor.set($any($event.target).value)"
-            />
-            <div class="bloque-edit-actions">
-              <button type="button" class="cancel-btn" (click)="cancelarAgregarVideo()">Cancelar</button>
-              <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoVideo(item.modulo.id)">
-                Agregar
-              </ui-button>
-            </div>
           </div>
         </div>
 
@@ -252,6 +255,22 @@
               </div>
             </li>
           </ul>
+        </div>
+
+        <div class="contenido-personalizable-section">
+          <div class="contenido-personalizable-header">
+            <h3>Contenido personalizable</h3>
+            <ui-button
+              variant="secondary"
+              [fullWidth]="false"
+              (pressed)="abrirLienzo(item.modulo.id, item.modulo.titulo)"
+            >
+              Abrir editor
+            </ui-button>
+          </div>
+          <p class="empty-contenidos">
+            Diseña libremente con texto, imágenes, videos y personajes, en las hojas que quieras.
+          </p>
         </div>
       </div>
     </ng-container>
@@ -405,6 +424,129 @@
   (cancelled)="confirmEliminarModuloAbierto.set(false)"
 ></confirm-dialog>
 
+<!-- Modal: agregar bloque de contenido -->
+<ui-modal
+  [open]="agregarBloqueModalAbierto()"
+  title="Agregar contenido"
+  (closed)="cerrarModalAgregarBloque()"
+>
+  <div class="bloque-tipo-tabs">
+    <button
+      type="button"
+      class="bloque-tipo-tab"
+      [class.active]="agregarBloqueTipo() === 'TEXTO'"
+      (click)="seleccionarTipoBloque('TEXTO')"
+    >
+      Texto
+    </button>
+    <button
+      type="button"
+      class="bloque-tipo-tab"
+      [class.active]="agregarBloqueTipo() === 'VIDEO'"
+      (click)="seleccionarTipoBloque('VIDEO')"
+    >
+      Video
+    </button>
+    <button
+      type="button"
+      class="bloque-tipo-tab"
+      [class.active]="agregarBloqueTipo() === 'IMAGEN'"
+      (click)="seleccionarTipoBloque('IMAGEN')"
+    >
+      Imagen
+    </button>
+    <button
+      type="button"
+      class="bloque-tipo-tab"
+      [class.active]="agregarBloqueTipo() === 'ARCHIVO'"
+      (click)="seleccionarTipoBloque('ARCHIVO')"
+    >
+      Archivo
+    </button>
+    <button
+      type="button"
+      class="bloque-tipo-tab"
+      [class.active]="agregarBloqueTipo() === 'PERSONAJE'"
+      (click)="seleccionarTipoBloque('PERSONAJE')"
+    >
+      Personaje
+    </button>
+  </div>
+
+  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'TEXTO'">
+    <textarea
+      rows="4"
+      placeholder="Escribe el contenido…"
+      [value]="nuevoTextoValor()"
+      (input)="nuevoTextoValor.set($any($event.target).value)"
+    ></textarea>
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
+      <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoTexto()">
+        Agregar
+      </ui-button>
+    </div>
+  </div>
+
+  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'VIDEO'">
+    <input
+      type="text"
+      placeholder="URL de YouTube"
+      [value]="nuevoVideoValor()"
+      (input)="nuevoVideoValor.set($any($event.target).value)"
+    />
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
+      <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoVideo()">
+        Agregar
+      </ui-button>
+    </div>
+  </div>
+
+  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'IMAGEN'">
+    <label class="file-btn file-btn-block">
+      {{ subiendoArchivoBloque() ? 'Subiendo…' : 'Elegir imagen…' }}
+      <input type="file" accept="image/*" [disabled]="!!subiendoArchivoBloque()" (change)="onArchivoBloqueSeleccionado($event, 'IMAGEN')" />
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'ARCHIVO'">
+    <label class="file-btn file-btn-block">
+      {{ subiendoArchivoBloque() ? 'Subiendo…' : 'Elegir archivo…' }}
+      <input type="file" [disabled]="!!subiendoArchivoBloque()" (change)="onArchivoBloqueSeleccionado($event, 'ARCHIVO')" />
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'PERSONAJE'">
+    <p class="personaje-ayuda">
+      Elige cualquier imagen como personaje (puede ser un dibujo, una foto, un ícono — lo que quieras) y escribe
+      lo que va a "decir", una frase por línea. El estudiante va a ir tocando la burbuja para pasar a la siguiente frase.
+    </p>
+    <label class="file-btn file-btn-block">
+      {{ nuevoPersonajeImagen()?.name ?? 'Elegir imagen del personaje…' }}
+      <input type="file" accept="image/*" (change)="onImagenPersonajeSeleccionada($event)" />
+    </label>
+    <textarea
+      rows="4"
+      placeholder="Hola, soy tu guía en este módulo…&#10;Hoy vamos a hablar de…&#10;¡Empecemos!"
+      [value]="nuevoPersonajeTexto()"
+      (input)="nuevoPersonajeTexto.set($any($event.target).value)"
+    ></textarea>
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
+      <ui-button [fullWidth]="false" [loading]="guardandoPersonaje()" (pressed)="guardarNuevoPersonaje()">
+        Agregar
+      </ui-button>
+    </div>
+  </div>
+</ui-modal>
+
 <confirm-dialog
   [open]="confirmEliminarBloqueAbierto()"
   title="Eliminar bloque"
@@ -414,3 +556,10 @@
   (confirmed)="confirmarEliminarBloque()"
   (cancelled)="confirmEliminarBloqueAbierto.set(false)"
 ></confirm-dialog>
+
+<app-lienzo
+  *ngIf="lienzoAbierto() as l"
+  [moduloId]="l.moduloId"
+  [tituloModulo]="l.titulo"
+  (cerrado)="cerrarLienzo()"
+></app-lienzo>

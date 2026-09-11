@@ -21,6 +21,18 @@ export const routes: Routes = [
           import('./pages/admin/usuarios-page/usuarios-page').then((m) => m.UsuariosPage),
       },
       {
+        path: 'programas',
+        loadComponent: () =>
+          import('./pages/admin/programas-page/programas-page').then((m) => m.ProgramasPage),
+      },
+      {
+        path: 'programas/:programaId',
+        loadComponent: () =>
+          import('./pages/admin/programa-detalle-page/programa-detalle-page').then(
+            (m) => m.ProgramaDetallePage,
+          ),
+      },
+      {
         path: 'cursos',
         loadComponent: () => import('./pages/admin/cursos-page/cursos-page').then((m) => m.CursosPage),
       },

@@ -7,7 +7,7 @@
     <div>
       <h1>{{ c.titulo }}</h1>
       <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
-      <p class="meta">Profesor: {{ nombreProfesor(c.profesorId) }}</p>
+      <p class="meta">Profesor: {{ nombreProfesor(c.profesorId) }} · Programa: {{ c.programaNombre ?? 'Sin programa asignado' }}</p>
     </div>
     <ui-button
       variant="secondary"

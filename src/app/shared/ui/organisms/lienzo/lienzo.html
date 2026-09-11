@@ -1,0 +1,177 @@
+<div class="lienzo-overlay" (pointerdown)="deseleccionarFondo()">
+  <div class="lienzo-panel" (pointerdown)="$event.stopPropagation()">
+    <div class="lienzo-header">
+      <div>
+        <h2>{{ soloLectura ? tituloModulo : 'Contenido personalizable — ' + tituloModulo }}</h2>
+        <span class="lienzo-estado" *ngIf="!soloLectura && sinGuardar()">Cambios sin guardar</span>
+      </div>
+      <div class="lienzo-header-actions">
+        <button
+          *ngIf="!soloLectura"
+          type="button"
+          class="lienzo-btn-primario"
+          [disabled]="guardando()"
+          (click)="guardar()"
+        >
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+        <button type="button" class="lienzo-btn-cerrar" (click)="cerrar()">✕ Cerrar</button>
+      </div>
+    </div>
+
+    <p *ngIf="error()" class="lienzo-error">{{ error() }}</p>
+
+    <div class="lienzo-paginas" *ngIf="!soloLectura">
+      <button
+        type="button"
+        *ngFor="let p of paginas(); trackBy: trackByPaginaId"
+        class="lienzo-pagina-tab"
+        [class.activa]="paginaActualId() === p.id"
+        (click)="seleccionarPagina(p.id)"
+      >
+        {{ p.nombre }}
+        <span class="lienzo-pagina-cerrar" (click)="eliminarPagina(p.id, $event)">✕</span>
+      </button>
+      <button type="button" class="lienzo-pagina-nueva" [disabled]="creandoPagina()" (click)="nuevaPagina()">
+        + Hoja
+      </button>
+    </div>
+
+    <ng-container *ngIf="!soloLectura && paginaActualId() !== null">
+      <div class="lienzo-toolbar">
+        <button type="button" (click)="agregarTexto()">+ Texto</button>
+        <label class="lienzo-file-btn">
+          {{ subiendoImagen() ? 'Subiendo…' : '+ Imagen' }}
+          <input type="file" accept="image/*" [disabled]="subiendoImagen()" (change)="onImagenSeleccionada($event)" />
+        </label>
+        <button type="button" (click)="abrirAgregarVideo()">+ Video</button>
+        <button type="button" (click)="abrirAgregarPersonaje()">+ Personaje</button>
+        <button
+          type="button"
+          class="lienzo-btn-eliminar"
+          [disabled]="!elementoSeleccionado()"
+          (click)="eliminarSeleccionado()"
+        >
+          Eliminar seleccionado
+        </button>
+      </div>
+
+      <div class="lienzo-mini-form" *ngIf="agregandoVideo()">
+        <input
+          type="text"
+          placeholder="URL de YouTube"
+          [value]="videoUrlTemp()"
+          (input)="videoUrlTemp.set($any($event.target).value)"
+        />
+        <button type="button" (click)="confirmarAgregarVideo()">Agregar</button>
+        <button type="button" (click)="cancelarAgregarVideo()">Cancelar</button>
+      </div>
+
+      <div class="lienzo-mini-form" *ngIf="agregandoPersonaje()">
+        <label class="lienzo-file-btn">
+          {{ personajeImagenTemp()?.name ?? 'Elegir imagen del personaje…' }}
+          <input type="file" accept="image/*" (change)="onImagenPersonajeTempSeleccionada($event)" />
+        </label>
+        <textarea
+          rows="3"
+          placeholder="Una frase por línea…"
+          [value]="personajeTextoTemp()"
+          (input)="personajeTextoTemp.set($any($event.target).value)"
+        ></textarea>
+        <button type="button" [disabled]="subiendoImagen()" (click)="confirmarAgregarPersonaje()">Agregar</button>
+        <button type="button" (click)="cancelarAgregarPersonaje()">Cancelar</button>
+      </div>
+
+      <div class="lienzo-panel-elemento" *ngIf="elementoSeleccionado() as sel">
+        <ng-container *ngIf="sel.tipo === 'PERSONAJE'">
+          <label>Diálogo del personaje (una frase por línea)</label>
+          <textarea rows="3" [value]="sel.texto" (input)="actualizarTexto(sel.id, $any($event.target).value)"></textarea>
+        </ng-container>
+      </div>
+
+      <p class="lienzo-ayuda">
+        Arrastra los elementos para moverlos y usa la esquina inferior derecha para cambiar su tamaño. Haz clic
+        dentro de un texto para escribir directamente. También podés pegar (Ctrl+V) una imagen copiada de otro
+        lado — se agrega sola, sin necesidad de descargarla primero.
+      </p>
+    </ng-container>
+
+    <div class="lienzo-vacio" *ngIf="paginaActualId() === null && !cargandoPaginas()">
+      <p *ngIf="!soloLectura">Todavía no hay hojas en este módulo. Creá la primera para empezar a diseñar.</p>
+      <p *ngIf="soloLectura">El profesor todavía no agregó contenido personalizable a este módulo.</p>
+      <button *ngIf="!soloLectura" type="button" class="lienzo-btn-primario" (click)="nuevaPagina()">
+        + Crear primera hoja
+      </button>
+    </div>
+
+    <div class="lienzo-scroll" *ngIf="paginaActualId() !== null">
+      <div class="lienzo-artboard" [style.width.px]="lienzo().ancho" [style.height.px]="lienzo().alto">
+        <div
+          *ngFor="let el of lienzo().elementos; trackBy: trackByElementoId"
+          class="lienzo-elemento"
+          [class.seleccionado]="!soloLectura && seleccionadoId() === el.id"
+          [class.solo-lectura]="soloLectura"
+          [style.left.px]="el.x"
+          [style.top.px]="el.y"
+          [style.width.px]="el.ancho"
+          [style.height.px]="el.alto"
+          [style.zIndex]="el.z"
+          (pointerdown)="iniciarArrastre($event, el.id)"
+        >
+          <ng-container [ngSwitch]="el.tipo">
+            <textarea
+              *ngSwitchCase="'TEXTO'"
+              class="lienzo-texto"
+              [class.lectura]="soloLectura"
+              [readOnly]="soloLectura"
+              [value]="el.texto"
+              (pointerdown)="!soloLectura && $event.stopPropagation()"
+              (input)="actualizarTexto(el.id, $any($event.target).value)"
+            ></textarea>
+
+            <img *ngSwitchCase="'IMAGEN'" [src]="el.imagenUrl" alt="" class="lienzo-imagen" />
+
+            <div *ngSwitchCase="'VIDEO'" class="lienzo-video">
+              <iframe [src]="el.videoUrl! | embedVideoUrl" allowfullscreen></iframe>
+            </div>
+
+            <div *ngSwitchCase="'PERSONAJE'" class="lienzo-personaje">
+              <img [src]="el.imagenUrl" alt="" class="lienzo-personaje-imagen" />
+              <button
+                type="button"
+                class="lienzo-personaje-burbuja"
+                (pointerdown)="soloLectura && $event.stopPropagation()"
+                (click)="soloLectura && siguienteFrasePersonaje(el)"
+              >
+                {{ soloLectura ? fraseActualPersonaje(el) : el.texto }}
+                <span *ngIf="soloLectura && frasesPersonaje(el).length > 1" class="lienzo-personaje-contador">
+                  {{ (personajeFraseIndice()[el.id] ?? 0) + 1 }} / {{ frasesPersonaje(el).length }} · toca para seguir
+                </span>
+              </button>
+            </div>
+          </ng-container>
+
+          <span *ngIf="!soloLectura" class="lienzo-resize-handle" (pointerdown)="iniciarRedimension($event, el.id)"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lienzo-paginacion" *ngIf="soloLectura && paginas().length > 1">
+      <button type="button" class="lienzo-paginacion-flecha" [disabled]="!hayPaginaAnterior()" (click)="paginaAnterior()">
+        ‹
+      </button>
+      <button
+        type="button"
+        *ngFor="let p of paginas(); trackBy: trackByPaginaId; let i = index"
+        class="lienzo-paginacion-num"
+        [class.activa]="paginaActualId() === p.id"
+        (click)="seleccionarPagina(p.id)"
+      >
+        {{ i + 1 }}
+      </button>
+      <button type="button" class="lienzo-paginacion-flecha" [disabled]="!hayPaginaSiguiente()" (click)="paginaSiguiente()">
+        ›
+      </button>
+    </div>
+  </div>
+</div>

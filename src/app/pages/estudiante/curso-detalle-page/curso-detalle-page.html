@@ -66,7 +66,22 @@
               </div>
 
               <div *ngSwitchCase="'VIDEO'" class="bloque-video">
-                <iframe [src]="embedVideoUrl(bloque.urlVideo!)" allowfullscreen></iframe>
+                <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
+              </div>
+
+              <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
+                <img
+                  *ngIf="personajeImagenUrls()[bloque.id] as url"
+                  [src]="url"
+                  [alt]="bloque.nombreArchivo ?? 'Personaje'"
+                  class="personaje-imagen"
+                />
+                <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
+                  {{ fraseActualPersonaje(bloque) }}
+                  <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
+                    {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
+                  </span>
+                </button>
               </div>
             </ng-container>
           </li>
@@ -129,6 +144,19 @@
             </li>
           </ul>
         </div>
+
+        <div class="contenido-personalizable-section">
+          <div class="contenido-personalizable-header">
+            <h3>Contenido personalizable</h3>
+            <ui-button
+              variant="secondary"
+              [fullWidth]="false"
+              (pressed)="abrirLienzo(item.modulo.id, item.modulo.titulo)"
+            >
+              Ver
+            </ui-button>
+          </div>
+        </div>
       </div>
     </ng-container>
 
@@ -142,3 +170,11 @@
     </div>
   </div>
 </div>
+
+<app-lienzo
+  *ngIf="lienzoAbierto() as l"
+  [moduloId]="l.moduloId"
+  [tituloModulo]="l.titulo"
+  [soloLectura]="true"
+  (cerrado)="cerrarLienzo()"
+></app-lienzo>

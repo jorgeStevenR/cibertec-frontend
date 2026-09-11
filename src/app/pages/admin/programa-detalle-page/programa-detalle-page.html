@@ -1,0 +1,89 @@
+<a class="back-link" routerLink="/admin/programas">← Volver a programas</a>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<ng-container *ngIf="programa() as p">
+  <div class="page-header">
+    <div>
+      <h1>{{ p.nombre }}</h1>
+      <p class="subtitle">{{ p.descripcion || 'Sin descripción.' }}</p>
+      <p class="meta">Duración: {{ p.duracionSemestres }} semestres</p>
+    </div>
+  </div>
+</ng-container>
+
+<div class="tabs">
+  <button type="button" [class.active]="tabActiva() === 'cursos'" (click)="tabActiva.set('cursos')">
+    Cursos
+  </button>
+  <button type="button" [class.active]="tabActiva() === 'estudiantes'" (click)="tabActiva.set('estudiantes')">
+    Estudiantes
+  </button>
+</div>
+
+<div *ngIf="tabActiva() === 'cursos'">
+  <div class="section-header">
+    <h2>Cursos de este programa</h2>
+    <ui-button variant="secondary" [fullWidth]="false" routerLink="/admin/cursos">Administrar cursos</ui-button>
+  </div>
+
+  <data-table
+    [columns]="cursoColumnas"
+    [rows]="cursos()"
+    [loading]="cargando()"
+    emptyMessage="Este programa todavía no tiene cursos asignados."
+  >
+    <ng-template #actions let-curso>
+      <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', curso.id]">
+        Ver
+      </ui-button>
+    </ng-template>
+  </data-table>
+</div>
+
+<div *ngIf="tabActiva() === 'estudiantes'">
+  <div class="section-header">
+    <h2>Estudiantes matriculados</h2>
+    <ui-button [fullWidth]="false" (pressed)="abrirMatricular()">Matricular estudiante</ui-button>
+  </div>
+
+  <data-table
+    [columns]="matriculaColumnas"
+    [rows]="matriculas()"
+    [loading]="cargando()"
+    emptyMessage="Todavía no hay estudiantes matriculados en este programa."
+  >
+    <ng-template #actions let-matricula>
+      <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarMatricula(matricula)">
+        Quitar
+      </ui-button>
+    </ng-template>
+  </data-table>
+</div>
+
+<ui-modal [open]="matriculaModalAbierto()" title="Matricular estudiante" (closed)="cerrarModalMatricula()">
+  <form [formGroup]="matriculaForm" (ngSubmit)="matricular()" novalidate class="modal-form">
+    <select-field
+      label="Estudiante"
+      inputId="estudianteId"
+      [control]="matriculaForm.controls.estudianteId"
+      [options]="estudiantesDisponibles"
+      errorMessage="Selecciona un estudiante"
+    ></select-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalMatricula()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="matriculando()">Matricular</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarMatriculaAbierto()"
+  title="Quitar matrícula"
+  [message]="'¿Seguro que quieres quitar a ' + nombreEstudiante(matriculaAEliminar()?.estudianteId ?? -1) + ' de este programa?'"
+  confirmLabel="Quitar"
+  [loading]="eliminandoMatricula()"
+  (confirmed)="confirmarEliminarMatricula()"
+  (cancelled)="confirmEliminarMatriculaAbierto.set(false)"
+></confirm-dialog>

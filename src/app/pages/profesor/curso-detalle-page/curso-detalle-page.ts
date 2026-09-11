@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -12,6 +11,8 @@ import { TextareaField } from '../../../shared/ui/molecules/textarea-field/texta
 import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
+import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
+import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
@@ -52,6 +53,8 @@ type Tab = 'curso' | 'participantes';
     UiModal,
     DataTable,
     ConfirmDialog,
+    LienzoComponent,
+    EmbedVideoUrlPipe,
   ],
   templateUrl: './curso-detalle-page.html',
   styleUrl: './curso-detalle-page.scss',
@@ -65,7 +68,6 @@ export class ProfesorCursoDetallePage implements OnInit {
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -150,11 +152,19 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly eliminandoModulo = signal(false);
 
   // --- Bloques (editor de contenido) ---
-  readonly agregandoTextoEnModulo = signal<number | null>(null);
+  readonly agregarBloqueModalAbierto = signal(false);
+  readonly agregarBloqueModuloId = signal<number | null>(null);
+  readonly agregarBloqueTipo = signal<TipoBloque>('TEXTO');
   readonly nuevoTextoValor = signal('');
-  readonly agregandoVideoEnModulo = signal<number | null>(null);
   readonly nuevoVideoValor = signal('');
   readonly subiendoArchivoBloque = signal<number | null>(null);
+  readonly dragOverModuloId = signal<number | null>(null);
+
+  readonly nuevoPersonajeImagen = signal<File | null>(null);
+  readonly nuevoPersonajeTexto = signal('');
+  readonly guardandoPersonaje = signal(false);
+  readonly personajeImagenUrls = signal<Record<number, string>>({});
+  readonly personajeFraseIndice = signal<Record<number, number>>({});
 
   readonly bloqueEditandoId = signal<number | null>(null);
   readonly textoEditandoValor = signal('');
@@ -165,6 +175,17 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly eliminandoBloque = signal(false);
 
   private arrastrando: { moduloId: number; bloqueId: number } | null = null;
+
+  // --- Lienzo libre (editor tipo Canva) ---
+  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string } | null>(null);
+
+  abrirLienzo(moduloId: number, titulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo });
+  }
+
+  cerrarLienzo(): void {
+    this.lienzoAbierto.set(null);
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -233,6 +254,8 @@ export class ProfesorCursoDetallePage implements OnInit {
               })),
             );
             this.cargando.set(false);
+            const personajes = resultados.flatMap((r) => r.bloques.filter((b) => b.tipo === 'PERSONAJE'));
+            this.cargarImagenesPersonaje(personajes);
           },
           error: (err: HttpErrorResponse) => {
             this.cargando.set(false);
@@ -259,6 +282,7 @@ export class ProfesorCursoDetallePage implements OnInit {
         titulo: curso.titulo,
         descripcion: curso.descripcion,
         publicado: !curso.publicado,
+        programaId: curso.programaId,
       })
       .subscribe({
         next: (actualizado) => {
@@ -519,31 +543,34 @@ export class ProfesorCursoDetallePage implements OnInit {
 
   // --- Bloques (editor de contenido) ---
 
-  embedVideoUrl(url: string): SafeResourceUrl {
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
-    const embed = match ? `https://www.youtube.com/embed/${match[1]}` : url;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
-  }
-
   private actualizarBloquesDelModulo(moduloId: number, bloques: Bloque[]): void {
     this.modulos.set(
       this.modulos().map((item) => (item.modulo.id === moduloId ? { ...item, bloques } : item)),
     );
   }
 
-  abrirAgregarTexto(moduloId: number): void {
-    this.agregandoVideoEnModulo.set(null);
-    this.agregandoTextoEnModulo.set(moduloId);
+  abrirAgregarBloque(moduloId: number): void {
+    this.agregarBloqueModuloId.set(moduloId);
+    this.agregarBloqueTipo.set('TEXTO');
     this.nuevoTextoValor.set('');
+    this.nuevoVideoValor.set('');
+    this.nuevoPersonajeImagen.set(null);
+    this.nuevoPersonajeTexto.set('');
+    this.agregarBloqueModalAbierto.set(true);
   }
 
-  cancelarAgregarTexto(): void {
-    this.agregandoTextoEnModulo.set(null);
+  cerrarModalAgregarBloque(): void {
+    this.agregarBloqueModalAbierto.set(false);
   }
 
-  guardarNuevoTexto(moduloId: number): void {
+  seleccionarTipoBloque(tipo: TipoBloque): void {
+    this.agregarBloqueTipo.set(tipo);
+  }
+
+  guardarNuevoTexto(): void {
+    const moduloId = this.agregarBloqueModuloId();
     const texto = this.nuevoTextoValor().trim();
-    if (!texto) {
+    if (moduloId == null || !texto) {
       return;
     }
     this.guardandoBloque.set(true);
@@ -551,7 +578,7 @@ export class ProfesorCursoDetallePage implements OnInit {
     this.bloqueService.crearTexto(moduloId, texto).subscribe({
       next: (bloque) => {
         this.guardandoBloque.set(false);
-        this.agregandoTextoEnModulo.set(null);
+        this.agregarBloqueModalAbierto.set(false);
         const item = this.modulos().find((m) => m.modulo.id === moduloId);
         this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
       },
@@ -562,19 +589,10 @@ export class ProfesorCursoDetallePage implements OnInit {
     });
   }
 
-  abrirAgregarVideo(moduloId: number): void {
-    this.agregandoTextoEnModulo.set(null);
-    this.agregandoVideoEnModulo.set(moduloId);
-    this.nuevoVideoValor.set('');
-  }
-
-  cancelarAgregarVideo(): void {
-    this.agregandoVideoEnModulo.set(null);
-  }
-
-  guardarNuevoVideo(moduloId: number): void {
+  guardarNuevoVideo(): void {
+    const moduloId = this.agregarBloqueModuloId();
     const url = this.nuevoVideoValor().trim();
-    if (!url) {
+    if (moduloId == null || !url) {
       return;
     }
     this.guardandoBloque.set(true);
@@ -582,7 +600,7 @@ export class ProfesorCursoDetallePage implements OnInit {
     this.bloqueService.crearVideo(moduloId, url).subscribe({
       next: (bloque) => {
         this.guardandoBloque.set(false);
-        this.agregandoVideoEnModulo.set(null);
+        this.agregarBloqueModalAbierto.set(false);
         const item = this.modulos().find((m) => m.modulo.id === moduloId);
         this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
       },
@@ -593,27 +611,195 @@ export class ProfesorCursoDetallePage implements OnInit {
     });
   }
 
-  onArchivoBloqueSeleccionado(evento: Event, moduloId: number, tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>): void {
+  onArchivoBloqueSeleccionado(evento: Event, tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>): void {
+    const moduloId = this.agregarBloqueModuloId();
     const input = evento.target as HTMLInputElement;
     const archivo = input.files?.[0];
-    if (!archivo) {
+    if (moduloId == null || !archivo) {
       return;
     }
+    this.subirArchivoAModulo(moduloId, tipo, archivo, () => {
+      input.value = '';
+      this.agregarBloqueModalAbierto.set(false);
+    });
+  }
+
+  private subirArchivoAModulo(
+    moduloId: number,
+    tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>,
+    archivo: File,
+    alTerminar?: () => void,
+  ): void {
     this.subiendoArchivoBloque.set(moduloId);
     this.error.set('');
     this.bloqueService.subirArchivo(moduloId, tipo, archivo).subscribe({
       next: (bloque) => {
         this.subiendoArchivoBloque.set(null);
-        input.value = '';
+        alTerminar?.();
         const item = this.modulos().find((m) => m.modulo.id === moduloId);
         this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
       },
       error: (err: HttpErrorResponse) => {
         this.subiendoArchivoBloque.set(null);
-        input.value = '';
+        alTerminar?.();
         this.error.set(extraerMensajeError(err));
       },
     });
+  }
+
+  private crearTextoRapido(moduloId: number, texto: string): void {
+    this.guardandoBloque.set(true);
+    this.error.set('');
+    this.bloqueService.crearTexto(moduloId, texto).subscribe({
+      next: (bloque) => {
+        this.guardandoBloque.set(false);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoBloque.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  private crearVideoRapido(moduloId: number, url: string): void {
+    this.guardandoBloque.set(true);
+    this.error.set('');
+    this.bloqueService.crearVideo(moduloId, url).subscribe({
+      next: (bloque) => {
+        this.guardandoBloque.set(false);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoBloque.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // --- Bloque "Personaje" (imagen + diálogo editable por el profesor) ---
+
+  onImagenPersonajeSeleccionada(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    this.nuevoPersonajeImagen.set(input.files?.[0] ?? null);
+  }
+
+  guardarNuevoPersonaje(): void {
+    const moduloId = this.agregarBloqueModuloId();
+    const imagen = this.nuevoPersonajeImagen();
+    const texto = this.nuevoPersonajeTexto().trim();
+    if (moduloId == null || !imagen || !texto) {
+      return;
+    }
+    this.guardandoPersonaje.set(true);
+    this.error.set('');
+    this.bloqueService.crearPersonaje(moduloId, imagen, texto).subscribe({
+      next: (bloque) => {
+        this.guardandoPersonaje.set(false);
+        this.nuevoPersonajeImagen.set(null);
+        this.nuevoPersonajeTexto.set('');
+        this.agregarBloqueModalAbierto.set(false);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+        this.cargarImagenesPersonaje([bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoPersonaje.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  private cargarImagenesPersonaje(bloques: Bloque[]): void {
+    for (const bloque of bloques) {
+      this.bloqueService.obtenerUrl(bloque.id).subscribe({
+        next: (respuesta) => {
+          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
+        },
+      });
+    }
+  }
+
+  frasesPersonaje(bloque: Bloque): string[] {
+    return (bloque.texto ?? '')
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+  }
+
+  fraseActualPersonaje(bloque: Bloque): string {
+    const frases = this.frasesPersonaje(bloque);
+    if (frases.length === 0) {
+      return '';
+    }
+    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
+    return frases[Math.min(indice, frases.length - 1)];
+  }
+
+  siguienteFrasePersonaje(bloque: Bloque): void {
+    const frases = this.frasesPersonaje(bloque);
+    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
+    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
+    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
+  }
+
+  // --- Pegar / arrastrar contenido directamente sobre el módulo ---
+
+  onDragOverZona(evento: DragEvent, moduloId: number): void {
+    evento.preventDefault();
+    this.dragOverModuloId.set(moduloId);
+  }
+
+  onDragLeaveZona(moduloId: number): void {
+    if (this.dragOverModuloId() === moduloId) {
+      this.dragOverModuloId.set(null);
+    }
+  }
+
+  onDropZona(evento: DragEvent, moduloId: number): void {
+    evento.preventDefault();
+    this.dragOverModuloId.set(null);
+    const archivo = evento.dataTransfer?.files?.[0];
+    if (!archivo) {
+      return;
+    }
+    const tipo = archivo.type.startsWith('image/') ? 'IMAGEN' : 'ARCHIVO';
+    this.subirArchivoAModulo(moduloId, tipo, archivo);
+  }
+
+  onPasteZona(evento: ClipboardEvent, moduloId: number): void {
+    const target = evento.target as HTMLElement;
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
+      return;
+    }
+
+    const items = evento.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          evento.preventDefault();
+          const archivo = it.getAsFile();
+          if (archivo) {
+            this.subirArchivoAModulo(moduloId, 'IMAGEN', archivo);
+          }
+          return;
+        }
+      }
+    }
+
+    const texto = evento.clipboardData?.getData('text/plain')?.trim();
+    if (texto) {
+      evento.preventDefault();
+      const esYoutube = /youtu\.?be/i.test(texto);
+      if (esYoutube) {
+        this.crearVideoRapido(moduloId, texto);
+      } else {
+        this.crearTextoRapido(moduloId, texto);
+      }
+    }
   }
 
   verBloque(bloque: Bloque): void {
