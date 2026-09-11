@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin.guard';
-import { authGuard } from './core/guards/auth.guard';
+import { profesorGuard } from './core/guards/profesor.guard';
+import { estudianteGuard } from './core/guards/estudiante.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -38,10 +39,46 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'proximamente',
+    path: 'profesor',
     loadComponent: () =>
-      import('./pages/coming-soon-page/coming-soon-page').then((m) => m.ComingSoonPage),
-    canActivate: [authGuard],
+      import('./pages/profesor/profesor-layout/profesor-layout').then((m) => m.ProfesorLayout),
+    canActivate: [profesorGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./pages/profesor/cursos-page/cursos-page').then((m) => m.ProfesorCursosPage),
+      },
+      {
+        path: 'cursos/:cursoId',
+        loadComponent: () =>
+          import('./pages/profesor/curso-detalle-page/curso-detalle-page').then(
+            (m) => m.ProfesorCursoDetallePage,
+          ),
+      },
+    ],
+  },
+  {
+    path: 'estudiante',
+    loadComponent: () =>
+      import('./pages/estudiante/estudiante-layout/estudiante-layout').then((m) => m.EstudianteLayout),
+    canActivate: [estudianteGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./pages/estudiante/cursos-page/cursos-page').then((m) => m.EstudianteCursosPage),
+      },
+      {
+        path: 'cursos/:cursoId',
+        loadComponent: () =>
+          import('./pages/estudiante/curso-detalle-page/curso-detalle-page').then(
+            (m) => m.EstudianteCursoDetallePage,
+          ),
+      },
+    ],
   },
   { path: '**', redirectTo: 'login' },
 ];

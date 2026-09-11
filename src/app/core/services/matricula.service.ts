@@ -13,6 +13,10 @@ export class MatriculaService {
     return this.http.get<Matricula[]>(`${this.base}/curso/${cursoId}`);
   }
 
+  listarPorEstudiante(estudianteId: number): Observable<Matricula[]> {
+    return this.http.get<Matricula[]>(`${this.base}/estudiante/${estudianteId}`);
+  }
+
   matricular(datos: MatriculaCrearRequest): Observable<Matricula> {
     return this.http.post<Matricula>(this.base, datos);
   }

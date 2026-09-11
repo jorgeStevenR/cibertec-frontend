@@ -2,11 +2,12 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = () => {
+export const estudianteGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.estaAutenticado()) {
+  const usuario = auth.usuarioActual();
+  if (usuario?.rol === 'ESTUDIANTE') {
     return true;
   }
 

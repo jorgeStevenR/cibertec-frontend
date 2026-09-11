@@ -1,0 +1,25 @@
+.welcome-header {
+  margin-bottom: 20px;
+
+  .eyebrow {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #90949c);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-primary, #1c1e21);
+  }
+
+  .subtitulo {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary, #606770);
+  }
+}

@@ -1,0 +1,29 @@
+<div class="curso-card">
+  <div class="card-top">
+    <span class="codigo" *ngIf="codigo()">{{ codigo() }}</span>
+    <span class="badge" [class.badge-on]="publicado()">{{ publicado() ? 'Publicado' : 'Borrador' }}</span>
+  </div>
+
+  <h3>{{ titulo() }}</h3>
+
+  <button
+    type="button"
+    class="participantes-btn"
+    *ngIf="mostrarParticipantes()"
+    (click)="participantesClick.emit()"
+  >
+    👥 Participantes
+  </button>
+
+  <ul class="meta-list" *ngIf="meta().length > 0">
+    <li *ngFor="let linea of meta()">{{ linea }}</li>
+  </ul>
+
+  <div class="docente" *ngIf="docenteNombre()">
+    <span class="docente-label">Docente</span>
+    <span class="docente-nombre">{{ docenteNombre() }}</span>
+    <span class="docente-email" *ngIf="docenteEmail()">{{ docenteEmail() }}</span>
+  </div>
+
+  <a class="card-action" [routerLink]="routerLinkTarget()">{{ actionLabel() }}</a>
+</div>

@@ -3,6 +3,8 @@ export interface Curso {
   titulo: string;
   descripcion: string;
   profesorId: number;
+  profesorNombre: string | null;
+  profesorEmail: string | null;
   publicado: boolean;
   fechaCreacion: string;
 }

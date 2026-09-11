@@ -1,0 +1,14 @@
+.state-msg {
+  color: var(--text-muted, #90949c);
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.cursos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+  align-items: start;
+}

@@ -32,7 +32,12 @@ export class LoginPage {
         this.loading.set(false);
         this.success.set(true);
 
-        const destino = respuesta.usuario.rol === 'ADMINISTRADOR' ? '/admin' : '/proximamente';
+        const destinos: Record<string, string> = {
+          ADMINISTRADOR: '/admin',
+          PROFESOR: '/profesor',
+          ESTUDIANTE: '/estudiante',
+        };
+        const destino = destinos[respuesta.usuario.rol] ?? '/login';
         setTimeout(() => this.router.navigateByUrl(destino), 500);
       },
       error: (error: HttpErrorResponse) => {

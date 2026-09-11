@@ -2,6 +2,8 @@ export interface Matricula {
   id: number;
   cursoId: number;
   estudianteId: number;
+  estudianteNombre: string | null;
+  estudianteEmail: string | null;
   fechaMatricula: string;
 }
 

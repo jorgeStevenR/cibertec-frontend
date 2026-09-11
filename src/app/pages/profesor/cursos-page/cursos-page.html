@@ -1,0 +1,38 @@
+<welcome-banner
+  [nombre]="usuario?.nombre ?? ''"
+  subtitulo="Estos son los cursos que tienes asignados como profesor."
+></welcome-banner>
+
+<banner-carousel></banner-carousel>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p *ngIf="cargando()" class="state-msg">Cargando…</p>
+
+<p *ngIf="!cargando() && cursos().length === 0" class="state-msg">
+  Todavía no tienes cursos asignados.
+</p>
+
+<div class="cursos-grid" *ngIf="!cargando() && cursos().length > 0">
+  <curso-card
+    *ngFor="let curso of cursosPagina()"
+    [codigo]="'CURSO-' + curso.id"
+    [titulo]="curso.titulo"
+    [publicado]="curso.publicado"
+    [meta]="[
+      curso.totalModulos + ' ' + (curso.totalModulos === 1 ? 'módulo' : 'módulos'),
+      curso.totalEstudiantes + ' ' + (curso.totalEstudiantes === 1 ? 'estudiante matriculado' : 'estudiantes matriculados'),
+      'Creado el ' + formatearFecha(curso.fechaCreacion)
+    ]"
+    [routerLinkTarget]="['/profesor', 'cursos', curso.id]"
+    (participantesClick)="abrirParticipantes(curso)"
+  ></curso-card>
+</div>
+
+<ui-pagination
+  *ngIf="!cargando() && cursos().length > 0"
+  [pagina]="pagina()"
+  [totalPaginas]="totalPaginas()"
+  [totalElementos]="cursos().length"
+  (cambiarPagina)="cambiarPagina($event)"
+></ui-pagination>
