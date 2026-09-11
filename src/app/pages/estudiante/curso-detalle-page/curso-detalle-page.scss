@@ -188,6 +188,50 @@ h1 {
   color: var(--text-muted, #90949c);
 }
 
+.bloques-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    padding: 4px 0;
+  }
+}
+
+.bloque-texto {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary, #1c1e21);
+  white-space: pre-wrap;
+}
+
+.bloque-archivo-btn {
+  padding: 10px 14px;
+  border: 1px solid var(--border, #dddfe2);
+  border-radius: 10px;
+  background: none;
+  font-size: 14px;
+  color: var(--text-primary, #1c1e21);
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+}
+
+.bloque-video iframe {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 8px;
+  display: block;
+}
+
 .contenidos-list {
   list-style: none;
   margin: 0;

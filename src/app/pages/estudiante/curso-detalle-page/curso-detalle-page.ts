@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -12,12 +13,14 @@ import { ContenidoService } from '../../../core/services/contenido.service';
 import { MatriculaService } from '../../../core/services/matricula.service';
 import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
+import { BloqueService } from '../../../core/services/bloque.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
 import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
+import { Bloque } from '../../../core/models/bloque.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -25,6 +28,7 @@ interface ModuloConContenidos {
   modulo: Modulo;
   contenidos: Contenido[];
   actividades: Actividad[];
+  bloques: Bloque[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -44,6 +48,8 @@ export class EstudianteCursoDetallePage implements OnInit {
   private readonly matriculaService = inject(MatriculaService);
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
+  private readonly bloqueService = inject(BloqueService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -124,6 +130,7 @@ export class EstudianteCursoDetallePage implements OnInit {
             forkJoin({
               contenidos: this.contenidoService.listarPorModulo(m.id),
               actividades: this.actividadService.listarPorModulo(m.id),
+              bloques: this.bloqueService.listarPorModulo(m.id),
             }),
           ),
         ).subscribe({
@@ -134,6 +141,7 @@ export class EstudianteCursoDetallePage implements OnInit {
               // el backend no filtra esto, asi que lo hacemos aca.
               contenidos: resultados[i].contenidos.filter((c) => c.visible),
               actividades: resultados[i].actividades,
+              bloques: resultados[i].bloques,
             }));
             this.modulos.set(modulosConDatos);
             this.cargarMisEntregas(modulosConDatos);
@@ -214,5 +222,19 @@ export class EstudianteCursoDetallePage implements OnInit {
       next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
       error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
     });
+  }
+
+  verBloque(bloque: Bloque): void {
+    this.error.set('');
+    this.bloqueService.obtenerUrl(bloque.id).subscribe({
+      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
+      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
+    });
+  }
+
+  embedVideoUrl(url: string): SafeResourceUrl {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
+    const embed = match ? `https://www.youtube.com/embed/${match[1]}` : url;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
   }
 }

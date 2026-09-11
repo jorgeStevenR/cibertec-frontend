@@ -48,6 +48,10 @@
 
   <div class="course-main">
     <ng-container *ngIf="tabActiva() === 'curso'">
+      <div class="modulos-toolbar">
+        <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCrearModulo()">Nuevo módulo</ui-button>
+      </div>
+
       <div *ngIf="modulos().length === 0" class="state-msg">
         Este curso todavía no tiene módulos.
       </div>
@@ -56,6 +60,142 @@
         <div class="modulo-header">
           <span class="modulo-orden">Módulo {{ item.modulo.orden }}</span>
           <h2>{{ item.modulo.titulo }}</h2>
+          <div class="modulo-header-actions">
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarModulo(item.modulo)">
+              Editar
+            </ui-button>
+            <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarModulo(item.modulo)">
+              Eliminar
+            </ui-button>
+          </div>
+        </div>
+
+        <div class="bloques-editor">
+          <ul class="bloques-list" *ngIf="item.bloques.length > 0">
+            <li
+              *ngFor="let bloque of item.bloques"
+              draggable="true"
+              (dragstart)="arrastrarInicio(item.modulo.id, bloque.id)"
+              (dragover)="permitirSoltar($event)"
+              (drop)="soltarSobre(item.modulo.id, bloque.id)"
+            >
+              <span class="bloque-handle" title="Arrastra para reordenar">⠿</span>
+
+              <div class="bloque-cuerpo">
+                <ng-container [ngSwitch]="bloque.tipo">
+                  <div *ngSwitchCase="'TEXTO'" class="bloque-texto">
+                    <ng-container *ngIf="bloqueEditandoId() !== bloque.id; else editandoTexto">
+                      <p>{{ bloque.texto }}</p>
+                    </ng-container>
+                    <ng-template #editandoTexto>
+                      <textarea
+                        class="bloque-textarea"
+                        rows="3"
+                        [value]="textoEditandoValor()"
+                        (input)="textoEditandoValor.set($any($event.target).value)"
+                      ></textarea>
+                      <div class="bloque-edit-actions">
+                        <button type="button" class="cancel-btn" (click)="cancelarEditarBloqueTexto()">Cancelar</button>
+                        <ui-button
+                          [fullWidth]="false"
+                          [loading]="guardandoBloque()"
+                          (pressed)="guardarEdicionBloqueTexto(item.modulo.id)"
+                        >
+                          Guardar
+                        </ui-button>
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <div *ngSwitchCase="'IMAGEN'" class="bloque-imagen">
+                    <span class="bloque-archivo-nombre">🖼️ {{ bloque.nombreArchivo }}</span>
+                  </div>
+
+                  <div *ngSwitchCase="'ARCHIVO'" class="bloque-archivo">
+                    <span class="bloque-archivo-nombre">📎 {{ bloque.nombreArchivo }}</span>
+                  </div>
+
+                  <div *ngSwitchCase="'VIDEO'" class="bloque-video">
+                    <iframe [src]="embedVideoUrl(bloque.urlVideo!)" allowfullscreen></iframe>
+                  </div>
+                </ng-container>
+              </div>
+
+              <div class="bloque-actions">
+                <ui-button
+                  *ngIf="bloque.tipo === 'IMAGEN' || bloque.tipo === 'ARCHIVO'"
+                  variant="secondary"
+                  [fullWidth]="false"
+                  (pressed)="verBloque(bloque)"
+                >
+                  Ver
+                </ui-button>
+                <ui-button
+                  *ngIf="bloque.tipo === 'TEXTO' && bloqueEditandoId() !== bloque.id"
+                  variant="secondary"
+                  [fullWidth]="false"
+                  (pressed)="abrirEditarBloqueTexto(bloque)"
+                >
+                  Editar
+                </ui-button>
+                <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarBloque(bloque)">
+                  Eliminar
+                </ui-button>
+              </div>
+            </li>
+          </ul>
+
+          <div class="bloques-toolbar">
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarTexto(item.modulo.id)">
+              + Texto
+            </ui-button>
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarVideo(item.modulo.id)">
+              + Video
+            </ui-button>
+            <label class="file-btn">
+              + Imagen
+              <input
+                type="file"
+                accept="image/*"
+                (change)="onArchivoBloqueSeleccionado($event, item.modulo.id, 'IMAGEN')"
+              />
+            </label>
+            <label class="file-btn">
+              + Archivo
+              <input type="file" (change)="onArchivoBloqueSeleccionado($event, item.modulo.id, 'ARCHIVO')" />
+            </label>
+            <span *ngIf="subiendoArchivoBloque() === item.modulo.id" class="subiendo-msg">Subiendo…</span>
+          </div>
+
+          <div class="bloque-nuevo-form" *ngIf="agregandoTextoEnModulo() === item.modulo.id">
+            <textarea
+              rows="3"
+              placeholder="Escribe el contenido…"
+              [value]="nuevoTextoValor()"
+              (input)="nuevoTextoValor.set($any($event.target).value)"
+            ></textarea>
+            <div class="bloque-edit-actions">
+              <button type="button" class="cancel-btn" (click)="cancelarAgregarTexto()">Cancelar</button>
+              <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoTexto(item.modulo.id)">
+                Agregar
+              </ui-button>
+            </div>
+          </div>
+
+          <div class="bloque-nuevo-form" *ngIf="agregandoVideoEnModulo() === item.modulo.id">
+            <input
+              type="text"
+              placeholder="URL de YouTube"
+              [value]="nuevoVideoValor()"
+              (input)="nuevoVideoValor.set($any($event.target).value)"
+            />
+            <div class="bloque-edit-actions">
+              <button type="button" class="cancel-btn" (click)="cancelarAgregarVideo()">Cancelar</button>
+              <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoVideo(item.modulo.id)">
+                Agregar
+              </ui-button>
+            </div>
+          </div>
         </div>
 
         <p *ngIf="item.contenidos.length === 0" class="empty-contenidos">Sin contenidos todavía.</p>
@@ -223,4 +363,54 @@
   [loading]="eliminandoActividad()"
   (confirmed)="confirmarEliminarActividad()"
   (cancelled)="confirmEliminarActividadAbierto.set(false)"
+></confirm-dialog>
+
+<!-- Modal: crear/editar módulo -->
+<ui-modal
+  [open]="moduloModalAbierto()"
+  [title]="moduloModoEdicion() ? 'Editar módulo' : 'Nuevo módulo'"
+  (closed)="cerrarModalModulo()"
+>
+  <form [formGroup]="moduloForm" (ngSubmit)="guardarModulo()" novalidate class="modal-form">
+    <form-field
+      label="Título"
+      inputId="modulo-titulo"
+      [control]="moduloForm.controls.titulo"
+      errorMessage="El título es obligatorio"
+      placeholder="Ej. Módulo 1: Introducción"
+    ></form-field>
+
+    <form-field
+      label="Orden"
+      inputId="modulo-orden"
+      type="number"
+      [control]="moduloForm.controls.orden"
+      errorMessage="Ingresa un orden válido"
+    ></form-field>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalModulo()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardandoModulo()">Guardar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarModuloAbierto()"
+  title="Eliminar módulo"
+  [message]="'¿Seguro que quieres eliminar \'' + (moduloAEliminar()?.titulo ?? '') + '\'? Se perderán también sus contenidos y actividades.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminandoModulo()"
+  (confirmed)="confirmarEliminarModulo()"
+  (cancelled)="confirmEliminarModuloAbierto.set(false)"
+></confirm-dialog>
+
+<confirm-dialog
+  [open]="confirmEliminarBloqueAbierto()"
+  title="Eliminar bloque"
+  message="¿Seguro que quieres eliminar este bloque de contenido?"
+  confirmLabel="Eliminar"
+  [loading]="eliminandoBloque()"
+  (confirmed)="confirmarEliminarBloque()"
+  (cancelled)="confirmEliminarBloqueAbierto.set(false)"
 ></confirm-dialog>

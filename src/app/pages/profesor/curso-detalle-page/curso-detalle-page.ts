@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -17,12 +18,14 @@ import { ContenidoService } from '../../../core/services/contenido.service';
 import { MatriculaService } from '../../../core/services/matricula.service';
 import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
+import { BloqueService } from '../../../core/services/bloque.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
 import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
+import { Bloque, TipoBloque } from '../../../core/models/bloque.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -30,6 +33,7 @@ interface ModuloConContenidos {
   modulo: Modulo;
   contenidos: Contenido[];
   actividades: Actividad[];
+  bloques: Bloque[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -60,6 +64,8 @@ export class ProfesorCursoDetallePage implements OnInit {
   private readonly matriculaService = inject(MatriculaService);
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
+  private readonly bloqueService = inject(BloqueService);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -128,6 +134,38 @@ export class ProfesorCursoDetallePage implements OnInit {
     comentario: [''],
   });
 
+  // --- Módulos ---
+  readonly moduloModalAbierto = signal(false);
+  readonly moduloModoEdicion = signal(false);
+  readonly moduloEditando = signal<Modulo | null>(null);
+  readonly guardandoModulo = signal(false);
+
+  readonly moduloForm = this.fb.group({
+    titulo: ['', [Validators.required]],
+    orden: [1, [Validators.required, Validators.min(1)]],
+  });
+
+  readonly confirmEliminarModuloAbierto = signal(false);
+  readonly moduloAEliminar = signal<Modulo | null>(null);
+  readonly eliminandoModulo = signal(false);
+
+  // --- Bloques (editor de contenido) ---
+  readonly agregandoTextoEnModulo = signal<number | null>(null);
+  readonly nuevoTextoValor = signal('');
+  readonly agregandoVideoEnModulo = signal<number | null>(null);
+  readonly nuevoVideoValor = signal('');
+  readonly subiendoArchivoBloque = signal<number | null>(null);
+
+  readonly bloqueEditandoId = signal<number | null>(null);
+  readonly textoEditandoValor = signal('');
+  readonly guardandoBloque = signal(false);
+
+  readonly confirmEliminarBloqueAbierto = signal(false);
+  readonly bloqueAEliminar = signal<Bloque | null>(null);
+  readonly eliminandoBloque = signal(false);
+
+  private arrastrando: { moduloId: number; bloqueId: number } | null = null;
+
   ngOnInit(): void {
     this.cargar();
     if (this.route.snapshot.queryParamMap.get('tab') === 'participantes') {
@@ -181,6 +219,7 @@ export class ProfesorCursoDetallePage implements OnInit {
             forkJoin({
               contenidos: this.contenidoService.listarPorModulo(m.id),
               actividades: this.actividadService.listarPorModulo(m.id),
+              bloques: this.bloqueService.listarPorModulo(m.id),
             }),
           ),
         ).subscribe({
@@ -190,6 +229,7 @@ export class ProfesorCursoDetallePage implements OnInit {
                 modulo,
                 contenidos: resultados[i].contenidos,
                 actividades: resultados[i].actividades,
+                bloques: resultados[i].bloques,
               })),
             );
             this.cargando.set(false);
@@ -398,6 +438,291 @@ export class ProfesorCursoDetallePage implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.guardandoCalificacion.set(false);
         this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // --- Módulos ---
+
+  abrirCrearModulo(): void {
+    this.moduloModoEdicion.set(false);
+    this.moduloEditando.set(null);
+    const siguienteOrden = this.modulos().length + 1;
+    this.moduloForm.reset({ titulo: '', orden: siguienteOrden });
+    this.moduloModalAbierto.set(true);
+  }
+
+  abrirEditarModulo(modulo: Modulo): void {
+    this.moduloModoEdicion.set(true);
+    this.moduloEditando.set(modulo);
+    this.moduloForm.reset({ titulo: modulo.titulo, orden: modulo.orden });
+    this.moduloModalAbierto.set(true);
+  }
+
+  cerrarModalModulo(): void {
+    this.moduloModalAbierto.set(false);
+  }
+
+  guardarModulo(): void {
+    if (this.moduloForm.invalid) {
+      this.moduloForm.markAllAsTouched();
+      return;
+    }
+
+    this.guardandoModulo.set(true);
+    this.error.set('');
+    const valores = this.moduloForm.getRawValue();
+    const datos = { titulo: valores.titulo!, orden: Number(valores.orden) };
+
+    const editando = this.moduloModoEdicion() ? this.moduloEditando() : null;
+    const obs = editando
+      ? this.moduloService.actualizar(editando.id, datos)
+      : this.moduloService.crear(this.cursoId, datos);
+
+    obs.subscribe({
+      next: () => {
+        this.guardandoModulo.set(false);
+        this.moduloModalAbierto.set(false);
+        this.cargar();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoModulo.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  pedirEliminarModulo(modulo: Modulo): void {
+    this.moduloAEliminar.set(modulo);
+    this.confirmEliminarModuloAbierto.set(true);
+  }
+
+  confirmarEliminarModulo(): void {
+    const modulo = this.moduloAEliminar();
+    if (!modulo) {
+      return;
+    }
+    this.eliminandoModulo.set(true);
+    this.moduloService.eliminar(modulo.id).subscribe({
+      next: () => {
+        this.eliminandoModulo.set(false);
+        this.confirmEliminarModuloAbierto.set(false);
+        this.cargar();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoModulo.set(false);
+        this.confirmEliminarModuloAbierto.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // --- Bloques (editor de contenido) ---
+
+  embedVideoUrl(url: string): SafeResourceUrl {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
+    const embed = match ? `https://www.youtube.com/embed/${match[1]}` : url;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
+  }
+
+  private actualizarBloquesDelModulo(moduloId: number, bloques: Bloque[]): void {
+    this.modulos.set(
+      this.modulos().map((item) => (item.modulo.id === moduloId ? { ...item, bloques } : item)),
+    );
+  }
+
+  abrirAgregarTexto(moduloId: number): void {
+    this.agregandoVideoEnModulo.set(null);
+    this.agregandoTextoEnModulo.set(moduloId);
+    this.nuevoTextoValor.set('');
+  }
+
+  cancelarAgregarTexto(): void {
+    this.agregandoTextoEnModulo.set(null);
+  }
+
+  guardarNuevoTexto(moduloId: number): void {
+    const texto = this.nuevoTextoValor().trim();
+    if (!texto) {
+      return;
+    }
+    this.guardandoBloque.set(true);
+    this.error.set('');
+    this.bloqueService.crearTexto(moduloId, texto).subscribe({
+      next: (bloque) => {
+        this.guardandoBloque.set(false);
+        this.agregandoTextoEnModulo.set(null);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoBloque.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  abrirAgregarVideo(moduloId: number): void {
+    this.agregandoTextoEnModulo.set(null);
+    this.agregandoVideoEnModulo.set(moduloId);
+    this.nuevoVideoValor.set('');
+  }
+
+  cancelarAgregarVideo(): void {
+    this.agregandoVideoEnModulo.set(null);
+  }
+
+  guardarNuevoVideo(moduloId: number): void {
+    const url = this.nuevoVideoValor().trim();
+    if (!url) {
+      return;
+    }
+    this.guardandoBloque.set(true);
+    this.error.set('');
+    this.bloqueService.crearVideo(moduloId, url).subscribe({
+      next: (bloque) => {
+        this.guardandoBloque.set(false);
+        this.agregandoVideoEnModulo.set(null);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoBloque.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  onArchivoBloqueSeleccionado(evento: Event, moduloId: number, tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    if (!archivo) {
+      return;
+    }
+    this.subiendoArchivoBloque.set(moduloId);
+    this.error.set('');
+    this.bloqueService.subirArchivo(moduloId, tipo, archivo).subscribe({
+      next: (bloque) => {
+        this.subiendoArchivoBloque.set(null);
+        input.value = '';
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.subiendoArchivoBloque.set(null);
+        input.value = '';
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  verBloque(bloque: Bloque): void {
+    this.error.set('');
+    this.bloqueService.obtenerUrl(bloque.id).subscribe({
+      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
+      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
+    });
+  }
+
+  abrirEditarBloqueTexto(bloque: Bloque): void {
+    this.bloqueEditandoId.set(bloque.id);
+    this.textoEditandoValor.set(bloque.texto ?? '');
+  }
+
+  cancelarEditarBloqueTexto(): void {
+    this.bloqueEditandoId.set(null);
+  }
+
+  guardarEdicionBloqueTexto(moduloId: number): void {
+    const id = this.bloqueEditandoId();
+    const texto = this.textoEditandoValor().trim();
+    if (id == null || !texto) {
+      return;
+    }
+    this.guardandoBloque.set(true);
+    this.error.set('');
+    this.bloqueService.actualizarTexto(id, texto).subscribe({
+      next: (actualizado) => {
+        this.guardandoBloque.set(false);
+        this.bloqueEditandoId.set(null);
+        const item = this.modulos().find((m) => m.modulo.id === moduloId);
+        this.actualizarBloquesDelModulo(
+          moduloId,
+          (item?.bloques ?? []).map((b) => (b.id === actualizado.id ? actualizado : b)),
+        );
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoBloque.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  pedirEliminarBloque(bloque: Bloque): void {
+    this.bloqueAEliminar.set(bloque);
+    this.confirmEliminarBloqueAbierto.set(true);
+  }
+
+  confirmarEliminarBloque(): void {
+    const bloque = this.bloqueAEliminar();
+    if (!bloque) {
+      return;
+    }
+    this.eliminandoBloque.set(true);
+    this.bloqueService.eliminar(bloque.id).subscribe({
+      next: () => {
+        this.eliminandoBloque.set(false);
+        this.confirmEliminarBloqueAbierto.set(false);
+        const item = this.modulos().find((m) => m.modulo.id === bloque.moduloId);
+        this.actualizarBloquesDelModulo(
+          bloque.moduloId,
+          (item?.bloques ?? []).filter((b) => b.id !== bloque.id),
+        );
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoBloque.set(false);
+        this.confirmEliminarBloqueAbierto.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  arrastrarInicio(moduloId: number, bloqueId: number): void {
+    this.arrastrando = { moduloId, bloqueId };
+  }
+
+  permitirSoltar(evento: DragEvent): void {
+    evento.preventDefault();
+  }
+
+  soltarSobre(moduloId: number, bloqueDestinoId: number): void {
+    if (!this.arrastrando || this.arrastrando.moduloId !== moduloId || this.arrastrando.bloqueId === bloqueDestinoId) {
+      this.arrastrando = null;
+      return;
+    }
+    const item = this.modulos().find((m) => m.modulo.id === moduloId);
+    if (!item) {
+      this.arrastrando = null;
+      return;
+    }
+
+    const bloques = [...item.bloques];
+    const origenIdx = bloques.findIndex((b) => b.id === this.arrastrando!.bloqueId);
+    const destinoIdx = bloques.findIndex((b) => b.id === bloqueDestinoId);
+    if (origenIdx === -1 || destinoIdx === -1) {
+      this.arrastrando = null;
+      return;
+    }
+
+    const [movido] = bloques.splice(origenIdx, 1);
+    bloques.splice(destinoIdx, 0, movido);
+    this.arrastrando = null;
+
+    this.actualizarBloquesDelModulo(moduloId, bloques);
+    this.bloqueService.reordenar(moduloId, bloques.map((b) => b.id)).subscribe({
+      error: (err: HttpErrorResponse) => {
+        this.error.set(extraerMensajeError(err));
+        this.cargar();
       },
     });
   }
