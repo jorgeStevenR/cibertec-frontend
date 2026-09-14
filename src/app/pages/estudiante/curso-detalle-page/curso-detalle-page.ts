@@ -3,10 +3,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
+import { CuestionarioResponderComponent } from '../../../shared/ui/organisms/cuestionario-responder/cuestionario-responder';
 import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
@@ -15,6 +17,7 @@ import { MatriculaService } from '../../../core/services/matricula.service';
 import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
+import { CuestionarioService } from '../../../core/services/cuestionario.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
@@ -22,6 +25,7 @@ import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
 import { Bloque } from '../../../core/models/bloque.model';
+import { Cuestionario } from '../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -30,6 +34,7 @@ interface ModuloConContenidos {
   contenidos: Contenido[];
   actividades: Actividad[];
   bloques: Bloque[];
+  cuestionarios: Cuestionario[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -37,7 +42,16 @@ type Tab = 'curso' | 'participantes';
 @Component({
   selector: 'app-estudiante-curso-detalle-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, UiAlert, UiButton, DataTable, LienzoComponent, EmbedVideoUrlPipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    UiAlert,
+    UiButton,
+    DataTable,
+    LienzoComponent,
+    CuestionarioResponderComponent,
+    EmbedVideoUrlPipe,
+  ],
   templateUrl: './curso-detalle-page.html',
   styleUrl: './curso-detalle-page.scss',
 })
@@ -50,6 +64,7 @@ export class EstudianteCursoDetallePage implements OnInit {
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
+  private readonly cuestionarioService = inject(CuestionarioService);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -88,6 +103,16 @@ export class EstudianteCursoDetallePage implements OnInit {
 
   cerrarLienzo(): void {
     this.lienzoAbierto.set(null);
+  }
+
+  readonly cuestionarioAbierto = signal<{ id: number; titulo: string } | null>(null);
+
+  abrirCuestionario(cuestionario: Cuestionario): void {
+    this.cuestionarioAbierto.set({ id: cuestionario.id, titulo: cuestionario.titulo });
+  }
+
+  cerrarCuestionario(): void {
+    this.cuestionarioAbierto.set(null);
   }
 
   ngOnInit(): void {
@@ -144,6 +169,9 @@ export class EstudianteCursoDetallePage implements OnInit {
               contenidos: this.contenidoService.listarPorModulo(m.id),
               actividades: this.actividadService.listarPorModulo(m.id),
               bloques: this.bloqueService.listarPorModulo(m.id),
+              // Si el backend de cuestionarios falla, no debe tumbar el resto del
+              // módulo (bloques/actividades/contenidos siguen funcionando bien).
+              cuestionarios: this.cuestionarioService.listarPorModulo(m.id).pipe(catchError(() => of([]))),
             }),
           ),
         ).subscribe({
@@ -155,6 +183,7 @@ export class EstudianteCursoDetallePage implements OnInit {
               contenidos: resultados[i].contenidos.filter((c) => c.visible),
               actividades: resultados[i].actividades,
               bloques: resultados[i].bloques,
+              cuestionarios: resultados[i].cuestionarios,
             }));
             this.modulos.set(modulosConDatos);
             this.cargarMisEntregas(modulosConDatos);

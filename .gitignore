@@ -44,4 +44,5 @@ __screenshots__/
 Thumbs.db
 
 # Claude Code (estado interno de la herramienta)
-.claude/
+.claude/*
+!.claude/settings.json

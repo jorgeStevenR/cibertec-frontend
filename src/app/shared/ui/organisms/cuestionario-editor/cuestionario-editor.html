@@ -1,0 +1,132 @@
+<div class="cq-overlay">
+  <div class="cq-panel">
+    <div class="cq-header">
+      <div>
+        <h2>{{ detalle()?.titulo ?? 'Cuestionario' }}</h2>
+        <span class="cq-puntaje" *ngIf="detalle() as d">Puntaje total: {{ d.puntajeMaximo }} pts</span>
+      </div>
+      <div class="cq-header-actions">
+        <button type="button" class="cq-btn-eliminar" (click)="pedirEliminarCuestionario()">
+          Eliminar cuestionario
+        </button>
+        <button type="button" class="cq-btn-cerrar" (click)="cerrar()">✕ Cerrar</button>
+      </div>
+    </div>
+
+    <p *ngIf="error()" class="cq-error">{{ error() }}</p>
+
+    <div class="cq-tabs">
+      <button type="button" [class.activa]="tabActiva() === 'preguntas'" (click)="seleccionarTab('preguntas')">
+        Preguntas
+      </button>
+      <button type="button" [class.activa]="tabActiva() === 'resultados'" (click)="seleccionarTab('resultados')">
+        Resultados
+      </button>
+    </div>
+
+    <div class="cq-body" *ngIf="tabActiva() === 'preguntas'">
+      <p *ngIf="cargando()" class="cq-estado">Cargando…</p>
+
+      <ng-container *ngIf="detalle() as d">
+        <p *ngIf="d.preguntas.length === 0 && !cargando()" class="cq-estado">
+          Este cuestionario todavía no tiene preguntas.
+        </p>
+
+        <ul class="cq-preguntas-list">
+          <li *ngFor="let p of d.preguntas">
+            <div class="cq-pregunta-header">
+              <span class="cq-pregunta-enunciado">{{ p.enunciado }}</span>
+              <span class="cq-pregunta-puntaje">{{ p.puntaje }} pts</span>
+            </div>
+            <ul class="cq-opciones-list">
+              <li *ngFor="let o of p.opciones" [class.correcta]="o.esCorrecta">
+                {{ o.texto }}
+                <span *ngIf="o.esCorrecta" class="cq-check">✓ correcta</span>
+              </li>
+            </ul>
+            <div class="cq-pregunta-actions">
+              <button type="button" (click)="abrirEditarPregunta(p)">Editar</button>
+              <button type="button" class="cq-link-eliminar" (click)="pedirEliminarPregunta(p)">Eliminar</button>
+            </div>
+          </li>
+        </ul>
+
+        <button type="button" class="cq-btn-nueva-pregunta" (click)="abrirNuevaPregunta()">+ Nueva pregunta</button>
+      </ng-container>
+
+      <div class="cq-form-pregunta" *ngIf="formularioAbierto()">
+        <h3>{{ preguntaEditandoId() ? 'Editar pregunta' : 'Nueva pregunta' }}</h3>
+
+        <p *ngIf="errorFormulario()" class="cq-error">{{ errorFormulario() }}</p>
+
+        <label class="cq-label">Enunciado</label>
+        <textarea
+          rows="2"
+          [value]="enunciado()"
+          (input)="enunciado.set($any($event.target).value)"
+          placeholder="Escribe la pregunta…"
+        ></textarea>
+
+        <label class="cq-label">Puntaje</label>
+        <input
+          type="number"
+          min="1"
+          class="cq-input-puntaje"
+          [value]="puntaje()"
+          (input)="puntaje.set($any($event.target).valueAsNumber || 1)"
+        />
+
+        <label class="cq-label">Opciones — marca cuál es la correcta</label>
+        <div class="cq-opcion-fila" *ngFor="let o of opciones(); let i = index">
+          <input type="radio" name="correcta" [checked]="correctaIndice() === i" (change)="correctaIndice.set(i)" />
+          <input
+            type="text"
+            [value]="o.texto"
+            (input)="actualizarTextoOpcion(i, $any($event.target).value)"
+            [placeholder]="'Opción ' + (i + 1)"
+          />
+          <button type="button" class="cq-quitar-opcion" [disabled]="opciones().length <= 2" (click)="quitarOpcion(i)">
+            ✕
+          </button>
+        </div>
+        <button type="button" class="cq-agregar-opcion" (click)="agregarOpcion()">+ Agregar opción</button>
+
+        <div class="cq-form-actions">
+          <button type="button" class="cq-cancelar" (click)="cancelarFormulario()">Cancelar</button>
+          <button type="button" class="cq-guardar" [disabled]="guardandoPregunta()" (click)="guardarPregunta()">
+            {{ guardandoPregunta() ? 'Guardando…' : 'Guardar pregunta' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cq-body" *ngIf="tabActiva() === 'resultados'">
+      <data-table
+        [columns]="intentoColumnas"
+        [rows]="intentos()"
+        [loading]="cargandoResultados()"
+        emptyMessage="Todavía nadie respondió este cuestionario."
+      ></data-table>
+    </div>
+  </div>
+</div>
+
+<confirm-dialog
+  [open]="confirmEliminarPreguntaAbierto()"
+  title="Eliminar pregunta"
+  message="¿Seguro que quieres eliminar esta pregunta?"
+  confirmLabel="Eliminar"
+  [loading]="eliminandoPregunta()"
+  (confirmed)="confirmarEliminarPregunta()"
+  (cancelled)="confirmEliminarPreguntaAbierto.set(false)"
+></confirm-dialog>
+
+<confirm-dialog
+  [open]="confirmEliminarCuestionarioAbierto()"
+  title="Eliminar cuestionario"
+  message="¿Seguro que quieres eliminar este cuestionario? Se perderán también las preguntas y los resultados de los estudiantes."
+  confirmLabel="Eliminar"
+  [loading]="eliminandoCuestionario()"
+  (confirmed)="confirmarEliminarCuestionario()"
+  (cancelled)="confirmEliminarCuestionarioAbierto.set(false)"
+></confirm-dialog>

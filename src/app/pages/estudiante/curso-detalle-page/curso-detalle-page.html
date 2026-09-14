@@ -145,6 +145,31 @@
           </ul>
         </div>
 
+        <div class="cuestionarios-section" *ngIf="item.cuestionarios.length > 0">
+          <div class="cuestionarios-header">
+            <h3>Cuestionarios</h3>
+          </div>
+
+          <ul class="cuestionarios-list">
+            <li *ngFor="let cq of item.cuestionarios">
+              <div class="cuestionario-info">
+                <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
+                <p class="cuestionario-descripcion" *ngIf="cq.descripcion">{{ cq.descripcion }}</p>
+                <span class="cuestionario-meta">
+                  {{ cq.puntajeMaximo }} pts
+                  <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
+                  <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
+                  <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
+                  <span *ngIf="!cq.disponible" class="badge">No disponible</span>
+                </span>
+              </div>
+              <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">
+                Abrir
+              </ui-button>
+            </li>
+          </ul>
+        </div>
+
         <div class="contenido-personalizable-section">
           <div class="contenido-personalizable-header">
             <h3>Contenido personalizable</h3>
@@ -178,3 +203,10 @@
   [soloLectura]="true"
   (cerrado)="cerrarLienzo()"
 ></app-lienzo>
+
+<app-cuestionario-responder
+  *ngIf="cuestionarioAbierto() as cq"
+  [cuestionarioId]="cq.id"
+  [titulo]="cq.titulo"
+  (cerrado)="cerrarCuestionario()"
+></app-cuestionario-responder>

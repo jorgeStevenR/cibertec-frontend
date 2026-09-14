@@ -8,14 +8,6 @@
       <h1>{{ c.titulo }}</h1>
       <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
     </div>
-    <ui-button
-      variant="secondary"
-      [fullWidth]="false"
-      [loading]="actualizandoEstado()"
-      (pressed)="togglePublicado()"
-    >
-      {{ c.publicado ? 'Despublicar' : 'Publicar' }}
-    </ui-button>
   </div>
 
   <div class="tabs">
@@ -36,7 +28,7 @@
 <p *ngIf="cargando()" class="state-msg">Cargando…</p>
 
 <div class="course-layout" *ngIf="!cargando()">
-  <nav class="course-nav" *ngIf="modulos().length > 0">
+  <nav class="course-nav" *ngIf="tabActiva() === 'curso' && modulos().length > 0">
     <p class="nav-title">Navegación</p>
     <div class="nav-section" *ngFor="let item of modulos()">
       <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id">{{ item.modulo.titulo }}</a>
@@ -257,6 +249,42 @@
           </ul>
         </div>
 
+        <div class="cuestionarios-section">
+          <div class="cuestionarios-header">
+            <h3>Cuestionarios</h3>
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCrearCuestionario(item.modulo.id)">
+              Nuevo cuestionario
+            </ui-button>
+          </div>
+
+          <p *ngIf="item.cuestionarios.length === 0" class="empty-contenidos">Sin cuestionarios todavía.</p>
+
+          <ul class="cuestionarios-list" *ngIf="item.cuestionarios.length > 0">
+            <li *ngFor="let cq of item.cuestionarios">
+              <div class="cuestionario-info">
+                <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
+                <span class="cuestionario-meta">
+                  {{ cq.puntajeMaximo }} pts
+                  <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
+                  <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
+                  <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
+                </span>
+              </div>
+              <div class="cuestionario-actions">
+                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditorCuestionario(cq)">
+                  Preguntas y resultados
+                </ui-button>
+                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarCuestionario(cq)">
+                  Editar
+                </ui-button>
+                <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarCuestionario(cq)">
+                  Eliminar
+                </ui-button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
         <div class="contenido-personalizable-section">
           <div class="contenido-personalizable-header">
             <h3>Contenido personalizable</h3>
@@ -327,6 +355,59 @@
   </form>
 </ui-modal>
 
+<!-- Modal: crear/editar cuestionario -->
+<ui-modal
+  [open]="cuestionarioModalAbierto()"
+  [title]="cuestionarioModoEdicion() ? 'Editar cuestionario' : 'Nuevo cuestionario'"
+  (closed)="cerrarModalCuestionario()"
+>
+  <form [formGroup]="cuestionarioForm" (ngSubmit)="guardarCuestionario()" novalidate class="modal-form">
+    <form-field
+      label="Título"
+      inputId="cuestionario-titulo"
+      [control]="cuestionarioForm.controls.titulo"
+      errorMessage="El título es obligatorio"
+    ></form-field>
+
+    <textarea-field
+      label="Descripción"
+      inputId="cuestionario-descripcion"
+      [control]="cuestionarioForm.controls.descripcion"
+      [rows]="3"
+    ></textarea-field>
+
+    <div class="field-row">
+      <label class="field-label" for="cuestionario-apertura">Fecha de apertura (opcional)</label>
+      <input
+        type="datetime-local"
+        id="cuestionario-apertura"
+        [formControl]="cuestionarioForm.controls.fechaApertura"
+      />
+    </div>
+
+    <div class="field-row">
+      <label class="field-label" for="cuestionario-fecha">Fecha de entrega (opcional)</label>
+      <input type="datetime-local" id="cuestionario-fecha" [formControl]="cuestionarioForm.controls.fechaEntrega" />
+    </div>
+
+    <form-field
+      label="Tiempo límite en minutos (opcional)"
+      inputId="cuestionario-tiempo"
+      type="number"
+      [control]="cuestionarioForm.controls.tiempoLimiteMinutos"
+    ></form-field>
+
+    <p class="cuestionario-nota" *ngIf="cuestionarioModoEdicion()">
+      Las preguntas se administran aparte, desde "Preguntas y resultados".
+    </p>
+
+    <div class="modal-actions">
+      <button type="button" class="cancel-btn" (click)="cerrarModalCuestionario()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardandoCuestionario()">Guardar</ui-button>
+    </div>
+  </form>
+</ui-modal>
+
 <!-- Modal: entregas -->
 <ui-modal
   [open]="entregasModalAbierto()"
@@ -382,6 +463,16 @@
   [loading]="eliminandoActividad()"
   (confirmed)="confirmarEliminarActividad()"
   (cancelled)="confirmEliminarActividadAbierto.set(false)"
+></confirm-dialog>
+
+<confirm-dialog
+  [open]="confirmEliminarCuestionarioAbierto()"
+  title="Eliminar cuestionario"
+  [message]="'¿Seguro que quieres eliminar \'' + (cuestionarioAEliminar()?.titulo ?? '') + '\'? Se perderán también las preguntas y los resultados de los estudiantes.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminandoCuestionario()"
+  (confirmed)="confirmarEliminarCuestionario()"
+  (cancelled)="confirmEliminarCuestionarioAbierto.set(false)"
 ></confirm-dialog>
 
 <!-- Modal: crear/editar módulo -->
@@ -563,3 +654,9 @@
   [tituloModulo]="l.titulo"
   (cerrado)="cerrarLienzo()"
 ></app-lienzo>
+
+<app-cuestionario-editor
+  *ngIf="cuestionarioEditorAbierto() as cq"
+  [cuestionarioId]="cq.id"
+  (cerrado)="cerrarEditorCuestionario()"
+></app-cuestionario-editor>

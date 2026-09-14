@@ -1,0 +1,360 @@
+.cq-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cq-panel {
+  background: var(--card, #ffffff);
+  border-radius: 14px;
+  width: min(720px, 100%);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.cq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #dddfe2);
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary, #1c1e21);
+  }
+}
+
+.cq-puntaje {
+  font-size: 12px;
+  color: var(--text-muted, #90949c);
+  font-weight: 600;
+}
+
+.cq-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cq-btn-eliminar {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 48, 37, 0.3);
+  background: none;
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: #d93025;
+  font-family: inherit;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(217, 48, 37, 0.06);
+  }
+}
+
+.cq-btn-cerrar {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #dddfe2);
+  background: none;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: var(--text-primary, #1c1e21);
+  font-family: inherit;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+}
+
+.cq-error {
+  margin: 10px 20px 0;
+  color: #d93025;
+  font-size: 13px;
+}
+
+.cq-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border, #dddfe2);
+
+  button {
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary, #606770);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-family: inherit;
+
+    &.activa {
+      color: var(--bright, #1877f2);
+      border-bottom-color: var(--bright, #1877f2);
+    }
+  }
+}
+
+.cq-body {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+
+.cq-estado {
+  color: var(--text-muted, #90949c);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.cq-preguntas-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    padding: 14px;
+    border: 1px solid var(--border, #dddfe2);
+    border-radius: 10px;
+  }
+}
+
+.cq-pregunta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cq-pregunta-enunciado {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+}
+
+.cq-pregunta-puntaje {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bright, #1877f2);
+  white-space: nowrap;
+}
+
+.cq-opciones-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  li {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+    color: var(--text-secondary, #606770);
+    border: none;
+
+    &.correcta {
+      background: rgba(46, 160, 67, 0.1);
+      color: #1a7f37;
+      font-weight: 600;
+    }
+  }
+}
+
+.cq-check {
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.cq-pregunta-actions {
+  display: flex;
+  gap: 14px;
+
+  button {
+    border: none;
+    background: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--bright, #1877f2);
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+  }
+
+  .cq-link-eliminar {
+    color: #d93025;
+  }
+}
+
+.cq-btn-nueva-pregunta {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px dashed var(--border, #dddfe2);
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+}
+
+.cq-form-pregunta {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border, #dddfe2);
+  border-radius: 12px;
+  background: rgba(24, 119, 242, 0.03);
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary, #1c1e21);
+  }
+
+  textarea,
+  input[type='text'],
+  .cq-input-puntaje {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #dddfe2);
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--text-primary, #1c1e21);
+  }
+
+  .cq-input-puntaje {
+    width: 100px;
+  }
+}
+
+.cq-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted, #90949c);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 12px 0 6px;
+}
+
+.cq-opcion-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  input[type='radio'] {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  input[type='text'] {
+    flex: 1;
+  }
+}
+
+.cq-quitar-opcion {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #dddfe2);
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted, #90949c);
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(217, 48, 37, 0.08);
+    color: #d93025;
+  }
+}
+
+.cq-agregar-opcion {
+  border: none;
+  background: none;
+  color: var(--bright, #1877f2);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+}
+
+.cq-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.cq-cancelar {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #dddfe2);
+  background: none;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: var(--text-primary, #1c1e21);
+  font-family: inherit;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+}
+
+.cq-guardar {
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--bright, #1877f2);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-family: inherit;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}

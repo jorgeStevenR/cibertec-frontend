@@ -438,6 +438,71 @@ h1 {
   color: var(--text-muted, #90949c);
 }
 
+.cuestionarios-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border, #dddfe2);
+}
+
+.cuestionarios-header {
+  margin-bottom: 10px;
+
+  h3 {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary, #1c1e21);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+}
+
+.cuestionarios-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border, #dddfe2);
+    flex-wrap: wrap;
+
+    &:first-child {
+      border-top: none;
+    }
+  }
+}
+
+.cuestionario-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cuestionario-titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+}
+
+.cuestionario-descripcion {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #606770);
+}
+
+.cuestionario-meta {
+  font-size: 12.5px;
+  color: var(--text-muted, #90949c);
+}
+
 .entrega-form {
   display: flex;
   align-items: center;

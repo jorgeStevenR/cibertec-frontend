@@ -3,7 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
@@ -12,6 +13,7 @@ import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
+import { CuestionarioEditorComponent } from '../../../shared/ui/organisms/cuestionario-editor/cuestionario-editor';
 import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
@@ -20,6 +22,7 @@ import { MatriculaService } from '../../../core/services/matricula.service';
 import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
+import { CuestionarioService } from '../../../core/services/cuestionario.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
@@ -27,6 +30,7 @@ import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
 import { Bloque, TipoBloque } from '../../../core/models/bloque.model';
+import { Cuestionario } from '../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -35,6 +39,7 @@ interface ModuloConContenidos {
   contenidos: Contenido[];
   actividades: Actividad[];
   bloques: Bloque[];
+  cuestionarios: Cuestionario[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -54,6 +59,7 @@ type Tab = 'curso' | 'participantes';
     DataTable,
     ConfirmDialog,
     LienzoComponent,
+    CuestionarioEditorComponent,
     EmbedVideoUrlPipe,
   ],
   templateUrl: './curso-detalle-page.html',
@@ -68,6 +74,7 @@ export class ProfesorCursoDetallePage implements OnInit {
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
+  private readonly cuestionarioService = inject(CuestionarioService);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -76,7 +83,6 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly modulos = signal<ModuloConContenidos[]>([]);
   readonly cargando = signal(false);
   readonly error = signal('');
-  readonly actualizandoEstado = signal(false);
 
   readonly tipoLabels = TIPO_CONTENIDO_LABELS;
   readonly formatearFecha = formatearFecha;
@@ -187,6 +193,127 @@ export class ProfesorCursoDetallePage implements OnInit {
     this.lienzoAbierto.set(null);
   }
 
+  // --- Cuestionarios (quiz de opción múltiple) ---
+  readonly cuestionarioModalAbierto = signal(false);
+  readonly cuestionarioModoEdicion = signal(false);
+  readonly cuestionarioEditando = signal<Cuestionario | null>(null);
+  readonly guardandoCuestionario = signal(false);
+
+  readonly cuestionarioForm = this.fb.group({
+    titulo: ['', [Validators.required]],
+    descripcion: [''],
+    fechaApertura: [''],
+    fechaEntrega: [''],
+    tiempoLimiteMinutos: [''],
+  });
+
+  readonly confirmEliminarCuestionarioAbierto = signal(false);
+  readonly cuestionarioAEliminar = signal<Cuestionario | null>(null);
+  readonly eliminandoCuestionario = signal(false);
+
+  readonly cuestionarioEditorAbierto = signal<{ id: number; titulo: string } | null>(null);
+
+  abrirCrearCuestionario(moduloId: number): void {
+    this.moduloActivo.set(moduloId);
+    this.cuestionarioModoEdicion.set(false);
+    this.cuestionarioEditando.set(null);
+    this.cuestionarioForm.reset({
+      titulo: '',
+      descripcion: '',
+      fechaApertura: '',
+      fechaEntrega: '',
+      tiempoLimiteMinutos: '',
+    });
+    this.cuestionarioModalAbierto.set(true);
+  }
+
+  abrirEditarCuestionario(cuestionario: Cuestionario): void {
+    this.moduloActivo.set(cuestionario.moduloId);
+    this.cuestionarioModoEdicion.set(true);
+    this.cuestionarioEditando.set(cuestionario);
+    this.cuestionarioForm.reset({
+      titulo: cuestionario.titulo,
+      descripcion: cuestionario.descripcion,
+      fechaApertura: cuestionario.fechaApertura ? cuestionario.fechaApertura.slice(0, 16) : '',
+      fechaEntrega: cuestionario.fechaEntrega ? cuestionario.fechaEntrega.slice(0, 16) : '',
+      tiempoLimiteMinutos: cuestionario.tiempoLimiteMinutos != null ? String(cuestionario.tiempoLimiteMinutos) : '',
+    });
+    this.cuestionarioModalAbierto.set(true);
+  }
+
+  cerrarModalCuestionario(): void {
+    this.cuestionarioModalAbierto.set(false);
+  }
+
+  guardarCuestionario(): void {
+    if (this.cuestionarioForm.invalid) {
+      this.cuestionarioForm.markAllAsTouched();
+      return;
+    }
+
+    this.guardandoCuestionario.set(true);
+    this.error.set('');
+    const valores = this.cuestionarioForm.getRawValue();
+    const datos = {
+      titulo: valores.titulo!,
+      descripcion: valores.descripcion ?? '',
+      fechaApertura: valores.fechaApertura ? valores.fechaApertura : null,
+      fechaEntrega: valores.fechaEntrega ? valores.fechaEntrega : null,
+      tiempoLimiteMinutos: valores.tiempoLimiteMinutos ? Number(valores.tiempoLimiteMinutos) : null,
+    };
+
+    const editando = this.cuestionarioModoEdicion() ? this.cuestionarioEditando() : null;
+    const obs = editando
+      ? this.cuestionarioService.actualizar(editando.id, datos)
+      : this.cuestionarioService.crear(this.moduloActivo()!, datos);
+
+    obs.subscribe({
+      next: () => {
+        this.guardandoCuestionario.set(false);
+        this.cuestionarioModalAbierto.set(false);
+        this.cargar();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoCuestionario.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  pedirEliminarCuestionario(cuestionario: Cuestionario): void {
+    this.cuestionarioAEliminar.set(cuestionario);
+    this.confirmEliminarCuestionarioAbierto.set(true);
+  }
+
+  confirmarEliminarCuestionario(): void {
+    const cuestionario = this.cuestionarioAEliminar();
+    if (!cuestionario) {
+      return;
+    }
+    this.eliminandoCuestionario.set(true);
+    this.cuestionarioService.eliminar(cuestionario.id).subscribe({
+      next: () => {
+        this.eliminandoCuestionario.set(false);
+        this.confirmEliminarCuestionarioAbierto.set(false);
+        this.cargar();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoCuestionario.set(false);
+        this.confirmEliminarCuestionarioAbierto.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  abrirEditorCuestionario(cuestionario: Cuestionario): void {
+    this.cuestionarioEditorAbierto.set({ id: cuestionario.id, titulo: cuestionario.titulo });
+  }
+
+  cerrarEditorCuestionario(): void {
+    this.cuestionarioEditorAbierto.set(null);
+    this.cargar();
+  }
+
   ngOnInit(): void {
     this.cargar();
     if (this.route.snapshot.queryParamMap.get('tab') === 'participantes') {
@@ -241,6 +368,9 @@ export class ProfesorCursoDetallePage implements OnInit {
               contenidos: this.contenidoService.listarPorModulo(m.id),
               actividades: this.actividadService.listarPorModulo(m.id),
               bloques: this.bloqueService.listarPorModulo(m.id),
+              // Si el backend de cuestionarios falla, no debe tumbar el resto del
+              // módulo (bloques/actividades/contenidos siguen funcionando bien).
+              cuestionarios: this.cuestionarioService.listarPorModulo(m.id).pipe(catchError(() => of([]))),
             }),
           ),
         ).subscribe({
@@ -251,6 +381,7 @@ export class ProfesorCursoDetallePage implements OnInit {
                 contenidos: resultados[i].contenidos,
                 actividades: resultados[i].actividades,
                 bloques: resultados[i].bloques,
+                cuestionarios: resultados[i].cuestionarios,
               })),
             );
             this.cargando.set(false);
@@ -268,32 +399,6 @@ export class ProfesorCursoDetallePage implements OnInit {
         this.error.set(extraerMensajeError(err));
       },
     });
-  }
-
-  togglePublicado(): void {
-    const curso = this.curso();
-    if (!curso) {
-      return;
-    }
-    this.actualizandoEstado.set(true);
-    this.error.set('');
-    this.cursoService
-      .actualizar(curso.id, {
-        titulo: curso.titulo,
-        descripcion: curso.descripcion,
-        publicado: !curso.publicado,
-        programaId: curso.programaId,
-      })
-      .subscribe({
-        next: (actualizado) => {
-          this.curso.set(actualizado);
-          this.actualizandoEstado.set(false);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.actualizandoEstado.set(false);
-          this.error.set(extraerMensajeError(err));
-        },
-      });
   }
 
   toggleVisibilidad(contenido: Contenido): void {
