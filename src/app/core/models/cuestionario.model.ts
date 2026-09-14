@@ -8,8 +8,13 @@ export interface Cuestionario {
   tiempoLimiteMinutos: number | null;
   puntajeMaximo: number;
   fechaCreacion: string;
-  // Calculado por el backend con la hora del servidor — no comparar fechas a mano.
-  disponible: boolean;
+  // Calculado por el backend con la hora del servidor — no comparar fechas a
+  // mano. Ausente/null se trata como disponible (fail-open): si un backend
+  // todavía no manda este campo, no debe dejar inaccesibles los cuestionarios.
+  // Junto con "preguntas.length" en CuestionarioDetalle arma un estado de 3
+  // valores: disponible / todavía-no-abre (preguntas=[]) / venció (preguntas
+  // con contenido) — ver CuestionarioResponderComponent.noAbierto()/vencido().
+  disponible?: boolean | null;
 }
 
 export interface CuestionarioRequest {
@@ -68,7 +73,16 @@ export interface IntentoResumen {
   fechaEntrega: string;
 }
 
-export interface PreguntaConRespuesta extends Pregunta {
+// Una opción de una pregunta YA calificada: a diferencia de Opcion,
+// "esCorrecta" siempre está presente (el backend solo la omite antes de que
+// el estudiante responda). Evita que el código de revisión trate "todavía no
+// sé si es correcta" y "confirmado incorrecta" como lo mismo.
+export interface OpcionCalificada extends Omit<Opcion, 'esCorrecta'> {
+  esCorrecta: boolean;
+}
+
+export interface PreguntaConRespuesta extends Omit<Pregunta, 'opciones'> {
+  opciones: OpcionCalificada[];
   opcionElegidaId: number;
 }
 

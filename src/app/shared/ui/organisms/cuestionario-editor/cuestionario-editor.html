@@ -59,16 +59,18 @@
 
         <p *ngIf="errorFormulario()" class="cq-error">{{ errorFormulario() }}</p>
 
-        <label class="cq-label">Enunciado</label>
+        <label class="cq-label" for="cq-enunciado">Enunciado</label>
         <textarea
+          id="cq-enunciado"
           rows="2"
           [value]="enunciado()"
           (input)="enunciado.set($any($event.target).value)"
           placeholder="Escribe la pregunta…"
         ></textarea>
 
-        <label class="cq-label">Puntaje</label>
+        <label class="cq-label" for="cq-puntaje">Puntaje</label>
         <input
+          id="cq-puntaje"
           type="number"
           min="1"
           class="cq-input-puntaje"
@@ -76,16 +78,29 @@
           (input)="puntaje.set($any($event.target).valueAsNumber || 1)"
         />
 
-        <label class="cq-label">Opciones — marca cuál es la correcta</label>
-        <div class="cq-opcion-fila" *ngFor="let o of opciones(); let i = index">
-          <input type="radio" name="correcta" [checked]="correctaIndice() === i" (change)="correctaIndice.set(i)" />
+        <span class="cq-label" id="cq-opciones-label">Opciones — marca cuál es la correcta</span>
+        <div class="cq-opcion-fila" *ngFor="let o of opciones(); let i = index" role="group" [attr.aria-labelledby]="'cq-opciones-label'">
+          <input
+            type="radio"
+            name="correcta"
+            [attr.aria-label]="'Marcar opción ' + (i + 1) + ' como correcta'"
+            [checked]="correctaIndice() === i"
+            (change)="correctaIndice.set(i)"
+          />
           <input
             type="text"
+            [attr.aria-label]="'Texto de la opción ' + (i + 1)"
             [value]="o.texto"
             (input)="actualizarTextoOpcion(i, $any($event.target).value)"
             [placeholder]="'Opción ' + (i + 1)"
           />
-          <button type="button" class="cq-quitar-opcion" [disabled]="opciones().length <= 2" (click)="quitarOpcion(i)">
+          <button
+            type="button"
+            class="cq-quitar-opcion"
+            [attr.aria-label]="'Quitar opción ' + (i + 1)"
+            [disabled]="opciones().length <= 2"
+            (click)="quitarOpcion(i)"
+          >
             ✕
           </button>
         </div>

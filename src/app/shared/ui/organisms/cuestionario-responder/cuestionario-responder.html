@@ -35,14 +35,20 @@
     <!-- Todavía no abre -->
     <div class="cr-body" *ngIf="!cargando() && !miIntento() && noAbierto() && cuestionario() as c">
       <div class="cr-aviso">
-        Este cuestionario abre el <strong>{{ formatearFecha(c.fechaApertura!) }}</strong>. Todavía no podés verlo.
+        <ng-container *ngIf="c.fechaApertura; else sinFechaAviso">
+          Este cuestionario abre el <strong>{{ formatearFecha(c.fechaApertura) }}</strong>. Todavía no podés verlo.
+        </ng-container>
+        <ng-template #sinFechaAviso>Este cuestionario todavía no está disponible.</ng-template>
       </div>
     </div>
 
     <!-- Venció el plazo: mostrar preguntas en solo lectura, sin poder responder -->
     <div class="cr-body" *ngIf="!cargando() && !miIntento() && vencido() && cuestionario() as c">
       <div class="cr-aviso cr-aviso-vencido">
-        El plazo para responder este cuestionario venció el <strong>{{ formatearFecha(c.fechaEntrega!) }}</strong>.
+        <ng-container *ngIf="c.fechaEntrega; else sinFechaVencida">
+          El plazo para responder este cuestionario venció el <strong>{{ formatearFecha(c.fechaEntrega) }}</strong>.
+        </ng-container>
+        <ng-template #sinFechaVencida>El plazo para responder este cuestionario ya venció.</ng-template>
       </div>
 
       <ul class="cr-preguntas-list">
@@ -55,37 +61,43 @@
       </ul>
     </div>
 
-    <!-- Disponible y sin responder: mostrar formulario -->
+    <!-- Disponible y sin responder: mostrar formulario (o un aviso si todavía no tiene preguntas) -->
     <div class="cr-body" *ngIf="!cargando() && !miIntento() && !noAbierto() && !vencido() && cuestionario() as c">
-      <p class="cr-ayuda">
-        Respondé todas las preguntas y tocá "Enviar" al final. No vas a poder cambiar tus respuestas después.
+      <p *ngIf="c.preguntas.length === 0" class="cr-aviso">
+        El profesor todavía no agregó preguntas a este cuestionario.
       </p>
 
-      <ul class="cr-preguntas-list">
-        <li *ngFor="let p of c.preguntas">
-          <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
-          <ul class="cr-opciones-list cr-opciones-form">
-            <li *ngFor="let o of p.opciones">
-              <label>
-                <input
-                  type="radio"
-                  [name]="'pregunta-' + p.id"
-                  [checked]="respuestas()[p.id] === o.id"
-                  (change)="elegirOpcion(p.id, o.id)"
-                />
-                {{ o.texto }}
-              </label>
-            </li>
-          </ul>
-        </li>
-      </ul>
+      <ng-container *ngIf="c.preguntas.length > 0">
+        <p class="cr-ayuda">
+          Respondé todas las preguntas y tocá "Enviar" al final. No vas a poder cambiar tus respuestas después.
+        </p>
 
-      <div class="cr-enviar-row">
-        <span class="cr-progreso">{{ totalRespondidas() }} / {{ totalPreguntas() }} respondidas</span>
-        <button type="button" class="cr-btn-enviar" [disabled]="!puedeEnviar()" (click)="pedirEnviar()">
-          Enviar respuestas
-        </button>
-      </div>
+        <ul class="cr-preguntas-list">
+          <li *ngFor="let p of c.preguntas">
+            <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
+            <ul class="cr-opciones-list cr-opciones-form">
+              <li *ngFor="let o of p.opciones">
+                <label>
+                  <input
+                    type="radio"
+                    [name]="'pregunta-' + p.id"
+                    [checked]="respuestas()[p.id] === o.id"
+                    (change)="elegirOpcion(p.id, o.id)"
+                  />
+                  {{ o.texto }}
+                </label>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="cr-enviar-row">
+          <span class="cr-progreso">{{ totalRespondidas() }} / {{ totalPreguntas() }} respondidas</span>
+          <button type="button" class="cr-btn-enviar" [disabled]="!puedeEnviar()" (click)="pedirEnviar()">
+            Enviar respuestas
+          </button>
+        </div>
+      </ng-container>
     </div>
   </div>
 </div>

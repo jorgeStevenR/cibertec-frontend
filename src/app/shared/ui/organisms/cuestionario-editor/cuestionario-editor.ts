@@ -173,6 +173,10 @@ export class CuestionarioEditorComponent implements OnInit {
       this.errorFormulario.set('Marca cuál opción es la correcta.');
       return;
     }
+    if (!Number.isFinite(this.puntaje()) || this.puntaje() < 1) {
+      this.errorFormulario.set('El puntaje debe ser 1 o más.');
+      return;
+    }
 
     this.errorFormulario.set('');
     this.guardandoPregunta.set(true);

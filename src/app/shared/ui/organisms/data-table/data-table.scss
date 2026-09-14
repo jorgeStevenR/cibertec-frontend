@@ -42,7 +42,8 @@ tbody tr:last-child td {
 
 .actions-cell {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
   white-space: nowrap;
 }

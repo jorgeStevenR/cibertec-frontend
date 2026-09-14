@@ -35,6 +35,16 @@ consumen una API REST propia (backend aparte, no incluido en este repo).
 - Panel de profesor: se quitó el botón Publicar/Despublicar del curso, y la
   pestaña "Participantes" ya no muestra la barra de navegación de módulos
   (solo la tabla).
+- **Tabla de Usuarios (admin)** rediseñada: columna única "Usuario" con avatar
+  de iniciales + nombre/correo apilados (mismo patrón visual que el avatar del
+  header), y acciones con un botón principal ("Editar") más dos enlaces
+  livianos ("Resetear contraseña"/"Eliminar") en vez de 3 botones iguales. La
+  tabla genérica (`data-table`) ahora soporta celdas con contenido custom vía
+  `<ng-template dataTableCell="clave">` (content projection), sin romper los
+  usos existentes que siguen mostrando texto/badge plano.
+- Se pasó una revisión de PR (3 agentes: code-reviewer, type-design-analyzer,
+  silent-failure-hunter) sobre el feature de Cuestionarios y se corrigieron
+  todos los hallazgos críticos/importantes — ver "Decisiones importantes".
 
 ## En progreso
 
@@ -45,7 +55,9 @@ Nada a medio terminar en este momento — punto de corte limpio.
 - **Backend**: confirmar que `fechaApertura`, `fechaEntrega`,
   `tiempoLimiteMinutos` y el campo calculado `disponible` de Cuestionario se
   persistan y devuelvan de verdad (a la fecha de esta entrada, el backend los
-  acepta en el request pero los ignora silenciosamente en la respuesta).
+  acepta en el request pero los ignora silenciosamente en la respuesta). El
+  frontend ya trata `disponible` ausente/null como "disponible" (fail-open)
+  para no bloquear cuestionarios mientras esto se resuelve.
 - Manijas de redimensionar en las 4 esquinas/lados del lienzo (hoy solo hay una,
   inferior derecha).
 - Panel de estilo de texto en el lienzo (fuente, tamaño, color, alineación).
@@ -55,6 +67,12 @@ Nada a medio terminar en este momento — punto de corte limpio.
 - Revisar un "Failed to fetch" puntual visto una vez en la pestaña
   Participantes del profesor — no se pudo reproducir de forma consistente.
 - Accesibilidad y responsive: deuda pendiente general (detalle en `CLAUDE.md`).
+- Deuda menor detectada en la revisión de PR de Cuestionarios (no bloqueante):
+  el formulario de pregunta en `cuestionario-editor` todavía no usa
+  ReactiveForms; `tiempoLimiteMinutos` no tiene cronómetro ni se hace cumplir
+  (falta decisión de producto); `resultadosCargados` nunca se resetea; falta
+  indicador de "ya respondido" en la lista de cuestionarios del estudiante;
+  `cerrarCuestionario()` no recarga tras enviar; sin tests unitarios todavía.
 
 ## Integración con backend
 
@@ -97,11 +115,29 @@ Nada a medio terminar en este momento — punto de corte limpio.
   por completo (no solo en el frontend) para un estudiante que todavía no
   respondió, para que no se pueda ver la respuesta correcta inspeccionando la
   red.
-- **Resiliencia de carga**: llamadas a features "opcionales" dentro de una
-  pantalla más grande (ej. cuestionarios al cargar un módulo) se envuelven en
-  `catchError` para que un endpoint roto no tumbe toda la pantalla.
+- **Resiliencia de carga con error visible**: llamadas a features "opcionales"
+  dentro de una pantalla más grande (ej. cuestionarios al cargar un módulo) se
+  envuelven en `catchError`, pero el error se loguea y se expone con un flag
+  (`cuestionariosError`) para mostrar un mensaje distinto de "no se pudo
+  cargar" — un `catchError(() => of([]))` sin esto es indistinguible de una
+  lista genuinamente vacía y puede esconder un 401/403/500 real (aplicar este
+  mismo patrón a cualquier carga "no crítica" nueva).
+- **Campos booleanos calculados por el backend que pueden faltar** (ej.
+  `disponible` en Cuestionario) se tipan `boolean | null | undefined` y se
+  tratan como **fail-open** (ausente/null = permitido) en vez de fail-closed,
+  para que un backend que todavía no manda el campo no bloquee la
+  funcionalidad para todos los usuarios.
 
 ## Log de sesiones
+
+### 2026-09-14 (parte 2)
+- Rediseño de la tabla de Usuarios del panel de administrador: avatar +
+  identidad apilada, acciones con jerarquía visual (un botón principal, dos
+  enlaces livianos). `data-table` ganó soporte de content projection por
+  columna sin romper compatibilidad con los usos existentes.
+- Revisión de PR de 3 agentes sobre el commit de Cuestionarios; se corrigieron
+  todos los hallazgos críticos e importantes (ver "Decisiones importantes" y
+  "Pendiente" para el detalle de lo corregido vs. lo diferido).
 
 ### 2026-09-14
 - Se implementaron 3 features grandes: "Contenido personalizable" (lienzo libre

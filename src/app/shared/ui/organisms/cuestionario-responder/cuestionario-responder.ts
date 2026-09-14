@@ -77,17 +77,24 @@ export class CuestionarioResponderComponent implements OnInit {
     return this.cuestionario()?.preguntas.length ?? 0;
   }
 
+  // "disponible" ausente/null se trata como disponible (fail-open) — así un
+  // backend que todavía no manda ese campo no deja inaccesibles todos los
+  // cuestionarios. Solo un "false" explícito activa los estados de abajo.
+  private estaDisponible(): boolean {
+    return this.cuestionario()?.disponible !== false;
+  }
+
   // Todavía no llegó la fecha de apertura: el backend no manda preguntas.
   noAbierto(): boolean {
     const c = this.cuestionario();
-    return !!c && !c.disponible && c.preguntas.length === 0;
+    return !!c && !this.estaDisponible() && c.preguntas.length === 0;
   }
 
   // Ya pasó la fecha de entrega: el backend sí manda las preguntas para
   // revisar, pero no se puede responder.
   vencido(): boolean {
     const c = this.cuestionario();
-    return !!c && !c.disponible && c.preguntas.length > 0;
+    return !!c && !this.estaDisponible() && c.preguntas.length > 0;
   }
 
   totalRespondidas(): number {

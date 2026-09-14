@@ -4,7 +4,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
@@ -40,6 +40,7 @@ interface ModuloConContenidos {
   actividades: Actividad[];
   bloques: Bloque[];
   cuestionarios: Cuestionario[];
+  cuestionariosError: boolean;
 }
 
 type Tab = 'curso' | 'participantes';
@@ -369,8 +370,15 @@ export class ProfesorCursoDetallePage implements OnInit {
               actividades: this.actividadService.listarPorModulo(m.id),
               bloques: this.bloqueService.listarPorModulo(m.id),
               // Si el backend de cuestionarios falla, no debe tumbar el resto del
-              // módulo (bloques/actividades/contenidos siguen funcionando bien).
-              cuestionarios: this.cuestionarioService.listarPorModulo(m.id).pipe(catchError(() => of([]))),
+              // módulo (bloques/actividades/contenidos siguen funcionando bien),
+              // pero sin ocultar el fallo como si simplemente no hubiera ninguno.
+              cuestionarios: this.cuestionarioService.listarPorModulo(m.id).pipe(
+                map((items) => ({ items, fallo: false })),
+                catchError((err: HttpErrorResponse) => {
+                  console.error(`Fallo al cargar cuestionarios del módulo ${m.id}`, err);
+                  return of({ items: [] as Cuestionario[], fallo: true });
+                }),
+              ),
             }),
           ),
         ).subscribe({
@@ -381,7 +389,8 @@ export class ProfesorCursoDetallePage implements OnInit {
                 contenidos: resultados[i].contenidos,
                 actividades: resultados[i].actividades,
                 bloques: resultados[i].bloques,
-                cuestionarios: resultados[i].cuestionarios,
+                cuestionarios: resultados[i].cuestionarios.items,
+                cuestionariosError: resultados[i].cuestionarios.fallo,
               })),
             );
             this.cargando.set(false);

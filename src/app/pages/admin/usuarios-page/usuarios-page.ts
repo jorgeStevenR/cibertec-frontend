@@ -11,7 +11,7 @@ import { Pagination } from '../../../shared/ui/molecules/pagination/pagination';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
-import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
+import { DataTable, DataTableCellDirective, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { UsuarioService } from '../../../core/services/usuario.service';
 import { Usuario } from '../../../core/models/usuario.model';
@@ -33,6 +33,7 @@ const TAMANO_PAGINA = 20;
     UiButton,
     UiAlert,
     DataTable,
+    DataTableCellDirective,
     ConfirmDialog,
   ],
   templateUrl: './usuarios-page.html',
@@ -72,11 +73,14 @@ export class UsuariosPage implements OnInit {
   ];
 
   readonly columnas: DataTableColumn<Usuario>[] = [
-    { key: 'nombre', label: 'Nombre', format: (u) => `${u.nombre} ${u.apellido}` },
-    { key: 'email', label: 'Correo' },
+    { key: 'usuario', label: 'Usuario' },
     { key: 'rol', label: 'Rol', format: (u) => ROL_LABELS[u.rol] },
     { key: 'activo', label: 'Estado', badge: (u) => u.activo, badgeLabels: ['Activo', 'Inactivo'] },
   ];
+
+  iniciales(usuario: Usuario): string {
+    return `${usuario.nombre.charAt(0)}${usuario.apellido.charAt(0)}`.toUpperCase();
+  }
 
   readonly form = this.fb.group({
     nombre: ['', [Validators.required]],

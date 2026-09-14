@@ -23,12 +23,20 @@
   [loading]="cargando()"
   [emptyMessage]="busqueda() ? 'No hay usuarios que coincidan con la búsqueda.' : 'Todavía no hay usuarios registrados.'"
 >
+  <ng-template dataTableCell="usuario" let-usuario>
+    <div class="usuario-identidad">
+      <span class="avatar">{{ iniciales(usuario) }}</span>
+      <div class="usuario-texto">
+        <span class="usuario-nombre">{{ usuario.nombre }} {{ usuario.apellido }}</span>
+        <span class="usuario-correo">{{ usuario.email }}</span>
+      </div>
+    </div>
+  </ng-template>
+
   <ng-template #actions let-usuario>
     <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(usuario)">Editar</ui-button>
-    <ui-button variant="secondary" [fullWidth]="false" (pressed)="resetear(usuario)">
-      Resetear contraseña
-    </ui-button>
-    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(usuario)">Eliminar</ui-button>
+    <button type="button" class="link-btn" (click)="resetear(usuario)">Resetear contraseña</button>
+    <button type="button" class="link-btn link-btn-danger" (click)="pedirEliminar(usuario)">Eliminar</button>
   </ng-template>
 </data-table>
 

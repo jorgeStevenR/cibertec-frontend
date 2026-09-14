@@ -145,12 +145,16 @@
           </ul>
         </div>
 
-        <div class="cuestionarios-section" *ngIf="item.cuestionarios.length > 0">
+        <div class="cuestionarios-section" *ngIf="item.cuestionarios.length > 0 || item.cuestionariosError">
           <div class="cuestionarios-header">
             <h3>Cuestionarios</h3>
           </div>
 
-          <ul class="cuestionarios-list">
+          <p *ngIf="item.cuestionariosError" class="empty-contenidos empty-contenidos-error">
+            No se pudieron cargar los cuestionarios de este módulo — intenta recargar la página.
+          </p>
+
+          <ul class="cuestionarios-list" *ngIf="!item.cuestionariosError">
             <li *ngFor="let cq of item.cuestionarios">
               <div class="cuestionario-info">
                 <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
@@ -160,7 +164,7 @@
                   <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
                   <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
                   <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
-                  <span *ngIf="!cq.disponible" class="badge">No disponible</span>
+                  <span *ngIf="cq.disponible === false" class="badge">No disponible</span>
                 </span>
               </div>
               <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">

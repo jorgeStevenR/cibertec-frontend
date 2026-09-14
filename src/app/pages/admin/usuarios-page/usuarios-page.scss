@@ -45,6 +45,71 @@ h1 {
   }
 }
 
+.usuario-identidad {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bright, #1877f2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.usuario-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.usuario-nombre {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+  white-space: nowrap;
+}
+
+.usuario-correo {
+  font-size: 12.5px;
+  color: var(--text-muted, #90949c);
+  white-space: nowrap;
+}
+
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #606770);
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    color: var(--bright, #1877f2);
+    text-decoration: underline;
+  }
+}
+
+.link-btn-danger {
+  color: #d93025;
+
+  &:hover {
+    color: #d93025;
+  }
+}
+
 .modal-form {
   display: flex;
   flex-direction: column;

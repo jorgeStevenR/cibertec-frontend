@@ -257,7 +257,12 @@
             </ui-button>
           </div>
 
-          <p *ngIf="item.cuestionarios.length === 0" class="empty-contenidos">Sin cuestionarios todavía.</p>
+          <p *ngIf="item.cuestionariosError" class="empty-contenidos empty-contenidos-error">
+            No se pudieron cargar los cuestionarios de este módulo — intenta recargar la página.
+          </p>
+          <p *ngIf="!item.cuestionariosError && item.cuestionarios.length === 0" class="empty-contenidos">
+            Sin cuestionarios todavía.
+          </p>
 
           <ul class="cuestionarios-list" *ngIf="item.cuestionarios.length > 0">
             <li *ngFor="let cq of item.cuestionarios">
