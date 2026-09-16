@@ -32,34 +32,11 @@
   background: var(--bg);
 }
 
+
 .brand-panel {
   flex: 1 1 50%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 40px clamp(32px, 6vw, 96px);
+  position: relative;
   border-right: 1px solid var(--border);
-
-  .mark-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 30px;
-
-    .mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: var(--bright);
-    }
-
-    span {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--bright);
-      letter-spacing: 0.01em;
-    }
-  }
 
   h1 {
     font-size: clamp(32px, 4vw, 52px);
@@ -67,17 +44,17 @@
     line-height: 1.12;
     letter-spacing: -0.02em;
     margin: 0 0 16px;
-    color: var(--text-primary);
+    color: #ffffff;
     max-width: 640px;
 
     .accent {
-      color: var(--bright);
+      color: #7fb2ff;
     }
   }
 
   .tagline {
     font-size: 17px;
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.85);
     margin: 0;
     max-width: 480px;
   }
@@ -85,10 +62,19 @@
 
 .form-panel {
   flex: 1 1 50%;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
+
+  .brand-logo {
+    position: absolute;
+    top: 32px;
+    left: 32px;
+    height: 56px;
+    width: auto;
+  }
 }
 
 .card {
@@ -119,11 +105,7 @@
     border-right: none;
     border-bottom: 1px solid var(--border);
     text-align: center;
-    padding: 40px 24px 32px;
-
-    .mark-row {
-      justify-content: center;
-    }
+    min-height: 320px;
 
     h1,
     .tagline {
@@ -137,6 +119,11 @@
 
   .form-panel {
     padding: 32px 24px 48px;
+
+    .brand-logo {
+      top: 16px;
+      left: 16px;
+    }
   }
 }
 

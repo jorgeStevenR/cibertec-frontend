@@ -1,20 +1,19 @@
 <div class="page" [class.leaving]="success()">
   <div class="stage">
     <div class="brand-panel">
-      <div class="mark-row">
-        <div class="mark"></div>
-        <span>CIBERCTEC</span>
-      </div>
+      <photo-carousel [imagenes]="imagenesCarousel" [intervaloMs]="6000">
+        <h1>
+          Aprende, enseña y <span class="accent">gestiona</span><br />
+          todo en un solo <span class="accent">lugar</span>.
+        </h1>
 
-      <h1>
-        Aprende, enseña y <span class="accent">gestiona</span><br />
-        todo en un solo <span class="accent">lugar</span>.
-      </h1>
-
-      <p class="tagline">La plataforma de Cibertec para estudiantes, docentes y administradores.</p>
+        <p class="tagline">La plataforma de Cibertec para estudiantes, docentes y administradores.</p>
+      </photo-carousel>
     </div>
 
     <div class="form-panel">
+      <img class="brand-logo" src="/logo-ciberctec.png" alt="Ciberctec" />
+
       <div class="card">
         <login-form
           [loading]="loading()"

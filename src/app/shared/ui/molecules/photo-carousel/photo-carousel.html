@@ -1,0 +1,26 @@
+<div class="photo-carousel">
+  <div class="slides" aria-hidden="true">
+    <div
+      class="slide"
+      *ngFor="let imagen of imagenes(); let i = index"
+      [class.active]="i === activo()"
+      [style.background-image]="'url(' + imagen + ')'"
+    ></div>
+    <div class="overlay"></div>
+  </div>
+
+  <div class="content">
+    <ng-content></ng-content>
+  </div>
+
+  <div class="dots" *ngIf="imagenes().length > 1">
+    <button
+      *ngFor="let imagen of imagenes(); let i = index"
+      type="button"
+      class="dot"
+      [class.active]="i === activo()"
+      (click)="irA(i)"
+      [attr.aria-label]="'Ir a la imagen ' + (i + 1) + ' de ' + imagenes().length"
+    ></button>
+  </div>
+</div>
