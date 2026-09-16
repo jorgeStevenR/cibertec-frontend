@@ -20,6 +20,18 @@ h1 {
   color: var(--text-secondary, #606770);
 }
 
+.filtros-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+  select-field {
+    display: block;
+    width: 220px;
+  }
+}
+
 .modal-form {
   display: flex;
   flex-direction: column;

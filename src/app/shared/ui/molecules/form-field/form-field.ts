@@ -19,6 +19,7 @@ export class FormField {
   readonly autocomplete = input('off');
   readonly errorMessage = input('');
   readonly hideLabel = input(false);
+  readonly conBoton = input(false);
 
   get invalido(): boolean {
     const c = this.control();

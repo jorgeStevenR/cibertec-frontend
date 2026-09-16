@@ -1,12 +1,16 @@
 <div class="field">
   <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}</label>
-  <ui-input
-    [inputId]="inputId()"
-    [type]="type()"
-    [placeholder]="placeholder()"
-    [autocomplete]="autocomplete()"
-    [invalid]="invalido"
-    [formControl]="control()"
-  ></ui-input>
+  <div class="field-input-wrapper">
+    <ui-input
+      [inputId]="inputId()"
+      [type]="type()"
+      [placeholder]="placeholder()"
+      [autocomplete]="autocomplete()"
+      [invalid]="invalido"
+      [conBoton]="conBoton()"
+      [formControl]="control()"
+    ></ui-input>
+    <ng-content select="[accion]"></ng-content>
+  </div>
   <p class="field-error" *ngIf="invalido && errorMessage()">{{ errorMessage() }}</p>
 </div>

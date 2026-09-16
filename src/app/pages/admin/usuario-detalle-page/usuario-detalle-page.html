@@ -1,0 +1,127 @@
+<a class="back-link" [routerLink]="volverUrl()">← Volver a usuarios</a>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p *ngIf="cargando()" class="state-msg">Cargando…</p>
+
+<ng-container *ngIf="usuario() as u">
+  <div class="page-header">
+    <div class="usuario-identidad">
+      <span class="avatar">{{ iniciales(u) }}</span>
+      <div>
+        <h1>{{ u.nombre }} {{ u.apellido }}</h1>
+        <p class="subtitle">{{ u.email }}</p>
+        <p class="meta">Cuenta creada: {{ formatearFecha(u.fechaCreacion) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="detalle-layout" [class.una-columna]="!puedeEditarEsteUsuario()">
+    <div class="card">
+      <h2>Información de la cuenta</h2>
+      <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="form">
+        <form-field label="Correo electrónico" inputId="email" type="email" [control]="form.controls.email"></form-field>
+
+        <form-field label="Cuenta creada" inputId="fechaCreacion" [control]="form.controls.fechaCreacion"></form-field>
+
+        <form-field label="Rol" inputId="rol" [control]="form.controls.rol"></form-field>
+
+        <form-field
+          label="Nombre"
+          inputId="nombre"
+          [control]="form.controls.nombre"
+          errorMessage="El nombre es obligatorio"
+        ></form-field>
+
+        <form-field
+          label="Apellido"
+          inputId="apellido"
+          [control]="form.controls.apellido"
+          errorMessage="El apellido es obligatorio"
+        ></form-field>
+
+        <p class="campo-nota campo-ancho">El rol se define al crear la cuenta y no se puede cambiar después.</p>
+
+        <label class="checkbox-row campo-ancho">
+          <input type="checkbox" [formControl]="form.controls.activo" />
+          Usuario activo
+        </label>
+
+        <div class="form-actions campo-ancho" *ngIf="puedeEditarEsteUsuario()">
+          <ui-button type="submit" [fullWidth]="false" [loading]="guardando()" [success]="guardado()">
+            Guardar cambios
+          </ui-button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card card-cuenta" *ngIf="puedeEditarEsteUsuario()">
+      <h2>Cuenta</h2>
+
+      <div class="cuenta-row">
+        <span class="cuenta-titulo">Restablecer contraseña</span>
+        <p class="cuenta-desc">Genera una contraseña temporal para compartir con el usuario.</p>
+        <ui-button variant="secondary" [loading]="reseteando()" (pressed)="resetear()">
+          Resetear contraseña
+        </ui-button>
+      </div>
+
+      <div class="cuenta-row">
+        <span class="cuenta-titulo">Eliminar usuario</span>
+        <p class="cuenta-desc">Esta acción no se puede deshacer.</p>
+        <ui-button variant="danger" (pressed)="pedirEliminar()">Eliminar</ui-button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-pertenencia">
+    <h2>Cursos y programas</h2>
+
+    <p *ngIf="cargandoPertenencia()" class="state-msg">Cargando…</p>
+
+    <p *ngIf="pertenenciaError()" class="empty-msg empty-msg-error">
+      No se pudo cargar esta información — intenta recargar la página.
+    </p>
+
+    <div class="pertenencia-grid" *ngIf="!cargandoPertenencia() && !pertenenciaError()">
+      <div class="pertenencia-col">
+        <h3>Programas</h3>
+        <p class="empty-msg" *ngIf="programasPertenece().length === 0">Todavía no pertenece a ningún programa.</p>
+        <ul class="pertenencia-list" *ngIf="programasPertenece().length > 0">
+          <li *ngFor="let p of programasPertenece()">{{ p.nombre }}</li>
+        </ul>
+      </div>
+
+      <div class="pertenencia-col">
+        <h3>Cursos</h3>
+        <p class="empty-msg" *ngIf="cursosPertenece().length === 0">Todavía no pertenece a ningún curso.</p>
+        <ul class="pertenencia-list" *ngIf="cursosPertenece().length > 0">
+          <li *ngFor="let c of cursosPertenece()">
+            <span>{{ c.nombre }}</span>
+            <span class="pertenencia-meta" *ngIf="c.meta">{{ c.meta }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<ui-modal [open]="passwordModalAbierto()" title="Contraseña temporal" (closed)="passwordModalAbierto.set(false)">
+  <p class="password-hint">
+    Copia esta contraseña y compártela con el usuario. No podrás volver a verla después de cerrar esta ventana.
+  </p>
+  <div class="password-box">
+    <code>{{ passwordTemporal() }}</code>
+    <button type="button" (click)="copiarPassword()">{{ copiado() ? 'Copiado ✓' : 'Copiar' }}</button>
+  </div>
+</ui-modal>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar usuario"
+  [message]="'¿Seguro que quieres eliminar a ' + (usuario()?.nombre ?? '') + '? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

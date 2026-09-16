@@ -6,22 +6,45 @@
     placeholder="Correo electrónico"
     autocomplete="email"
     [control]="form.controls.email"
-    errorMessage="Ingresa un correo válido"
+    [errorMessage]="mensajeErrorEmail()"
     [hideLabel]="true"
   ></form-field>
 
   <form-field
     label="Contraseña"
     inputId="password"
-    type="password"
+    [type]="tipoPasswordInput()"
     placeholder="Contraseña"
     autocomplete="current-password"
     [control]="form.controls.password"
-    errorMessage="La contraseña debe tener al menos 6 caracteres"
+    [errorMessage]="mensajeErrorPassword()"
     [hideLabel]="true"
-  ></form-field>
+    [conBoton]="true"
+  >
+    <button
+      accion
+      type="button"
+      class="toggle-password"
+      (click)="alternarPassword()"
+      [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+    >
+      <svg *ngIf="!mostrarPassword()" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"
+        />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <svg *ngIf="mostrarPassword()" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"
+        />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="3" y1="3" x2="21" y2="21" />
+      </svg>
+    </button>
+  </form-field>
 
-  <p class="server-error" *ngIf="serverError()">{{ serverError() }}</p>
+  <ui-alert [message]="serverError()" variant="danger"></ui-alert>
 
   <ui-button type="submit" [loading]="loading()" [success]="success()">
     Iniciar sesión

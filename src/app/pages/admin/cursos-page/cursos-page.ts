@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -66,6 +67,9 @@ export class CursosPage implements OnInit {
   readonly totalPaginas = signal(1);
   readonly totalElementos = signal(0);
 
+  readonly filtroProfesor = this.fb.control('TODOS');
+  readonly filtroPrograma = this.fb.control('TODOS');
+
   readonly modalAbierto = signal(false);
   readonly modoEdicion = signal(false);
   readonly cursoEditando = signal<Curso | null>(null);
@@ -96,6 +100,17 @@ export class CursosPage implements OnInit {
     publicado: [false],
   });
 
+  constructor() {
+    this.filtroProfesor.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.pagina.set(0);
+      this.cargar();
+    });
+    this.filtroPrograma.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.pagina.set(0);
+      this.cargar();
+    });
+  }
+
   ngOnInit(): void {
     this.cargar();
   }
@@ -104,7 +119,12 @@ export class CursosPage implements OnInit {
     this.cargando.set(true);
     this.error.set('');
     forkJoin({
-      cursos: this.cursoService.listar({ pagina: this.pagina(), tamano: TAMANO_PAGINA }),
+      cursos: this.cursoService.listar({
+        pagina: this.pagina(),
+        tamano: TAMANO_PAGINA,
+        profesorId: this.filtroProfesor.value !== 'TODOS' ? Number(this.filtroProfesor.value) : undefined,
+        programaId: this.filtroPrograma.value !== 'TODOS' ? Number(this.filtroPrograma.value) : undefined,
+      }),
       usuarios: this.usuarioService.listar({ tamano: TAMANO_LOOKUP_PROFESORES }),
       programas: this.programaService.listar({ tamano: TAMANO_LOOKUP_PROGRAMAS }),
     }).subscribe({
@@ -139,6 +159,14 @@ export class CursosPage implements OnInit {
 
   get opcionesPrograma(): UiSelectOption[] {
     return this.programas().map((p) => ({ value: String(p.id), label: p.nombre }));
+  }
+
+  get opcionesProfesorFiltro(): UiSelectOption[] {
+    return [{ value: 'TODOS', label: 'Todos los profesores' }, ...this.opcionesProfesor];
+  }
+
+  get opcionesProgramaFiltro(): UiSelectOption[] {
+    return [{ value: 'TODOS', label: 'Todos los programas' }, ...this.opcionesPrograma];
   }
 
   abrirCrear(): void {

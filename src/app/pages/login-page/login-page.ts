@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LoginForm } from '../../shared/ui/organisms/login-form/login-form';
 import { PhotoCarousel } from '../../shared/ui/molecules/photo-carousel/photo-carousel';
 import { AuthService } from '../../core/services/auth.service';
 import { LoginRequest } from '../../core/models/usuario.model';
+import { extraerMensajeError } from '../../core/utils/http-error.util';
 
 // TODO: reemplazar por fotos reales de Cibertec (campus, aulas, estudiantes) cuando estén disponibles.
 const IMAGENES_CAROUSEL: string[] = [
@@ -29,10 +30,8 @@ export class LoginPage {
   readonly success = signal(false);
   readonly serverError = signal('');
 
-  constructor(
-    private readonly auth: AuthService,
-    private readonly router: Router,
-  ) {}
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   onSubmit(credenciales: LoginRequest): void {
     this.serverError.set('');
@@ -45,6 +44,7 @@ export class LoginPage {
 
         const destinos: Record<string, string> = {
           ADMINISTRADOR: '/admin',
+          GESTOR_USUARIOS: '/gestor-usuarios',
           PROFESOR: '/profesor',
           ESTUDIANTE: '/estudiante',
         };
@@ -53,7 +53,7 @@ export class LoginPage {
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
-        this.serverError.set(error.error?.message ?? 'No se pudo iniciar sesión. Intenta de nuevo.');
+        this.serverError.set(extraerMensajeError(error, 'No se pudo iniciar sesión. Intenta de nuevo.'));
       },
     });
   }

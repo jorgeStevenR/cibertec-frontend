@@ -20,6 +20,7 @@ export class UiInput implements ControlValueAccessor {
   readonly placeholder = input('');
   readonly autocomplete = input('off');
   readonly invalid = input(false);
+  readonly conBoton = input(false);
 
   protected value = '';
   protected disabled = false;

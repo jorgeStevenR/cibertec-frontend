@@ -1,8 +1,7 @@
 <div class="shell">
   <aside class="sidebar">
     <div class="brand">
-      <div class="mark"></div>
-      <span>CIBERCTEC</span>
+      <img src="/logo-ciberctec.png" alt="Ciberctec" />
     </div>
 
     <nav>
@@ -13,8 +12,11 @@
 
     <div class="sidebar-footer">
       <div class="user-info">
-        <span class="user-name">{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
-        <span class="user-email">{{ usuario?.email }}</span>
+        <span class="avatar" *ngIf="usuario as u">{{ iniciales(u) }}</span>
+        <div class="user-texto">
+          <span class="user-name">{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
+          <span class="user-email">{{ usuario?.email }}</span>
+        </div>
       </div>
       <button type="button" class="logout-btn" (click)="cerrarSesion()">Cerrar sesión</button>
     </div>

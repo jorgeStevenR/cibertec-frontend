@@ -1,9 +1,10 @@
 <div class="page-header">
   <div>
     <h1>Usuarios</h1>
-    <p class="subtitle">Administra las cuentas de administradores, docentes y estudiantes.</p>
+    <p class="subtitle" *ngIf="puedeGestionar()">Administra las cuentas de docentes y estudiantes.</p>
+    <p class="subtitle" *ngIf="!puedeGestionar()">Consulta las cuentas de administradores, docentes y estudiantes.</p>
   </div>
-  <ui-button [fullWidth]="false" (pressed)="abrirCrear()">Nuevo usuario</ui-button>
+  <ui-button *ngIf="puedeGestionar()" [fullWidth]="false" [routerLink]="[detalleBase(), 'nuevo']">Nuevo usuario</ui-button>
 </div>
 
 <ui-alert [message]="error()"></ui-alert>
@@ -34,9 +35,9 @@
   </ng-template>
 
   <ng-template #actions let-usuario>
-    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(usuario)">Editar</ui-button>
-    <button type="button" class="link-btn" (click)="resetear(usuario)">Resetear contraseña</button>
-    <button type="button" class="link-btn link-btn-danger" (click)="pedirEliminar(usuario)">Eliminar</button>
+    <ui-button variant="secondary" [fullWidth]="false" [routerLink]="[detalleBase(), usuario.id]">
+      {{ puedeGestionar() ? 'Editar' : 'Ver' }}
+    </ui-button>
   </ng-template>
 </data-table>
 
@@ -46,81 +47,3 @@
   [totalElementos]="totalElementos()"
   (cambiarPagina)="cambiarPagina($event)"
 ></ui-pagination>
-
-<ui-modal
-  [open]="modalAbierto()"
-  [title]="modoEdicion() ? 'Editar usuario' : 'Nuevo usuario'"
-  (closed)="cerrarModal()"
->
-  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="modal-form">
-    <form-field
-      label="Nombre"
-      inputId="nombre"
-      [control]="form.controls.nombre"
-      errorMessage="El nombre es obligatorio"
-    ></form-field>
-
-    <form-field
-      label="Apellido"
-      inputId="apellido"
-      [control]="form.controls.apellido"
-      errorMessage="El apellido es obligatorio"
-    ></form-field>
-
-    <ng-container *ngIf="!modoEdicion()">
-      <form-field
-        label="Correo electrónico"
-        inputId="email"
-        type="email"
-        [control]="form.controls.email"
-        errorMessage="Ingresa un correo válido"
-      ></form-field>
-
-      <form-field
-        label="Contraseña"
-        inputId="password"
-        type="password"
-        [control]="form.controls.password"
-        errorMessage="Mínimo 8 caracteres"
-      ></form-field>
-    </ng-container>
-
-    <select-field
-      label="Rol"
-      inputId="rol"
-      [control]="form.controls.rol"
-      [options]="opcionesRol"
-      errorMessage="Selecciona un rol"
-    ></select-field>
-
-    <label class="checkbox-row" *ngIf="modoEdicion()">
-      <input type="checkbox" [formControl]="form.controls.activo" />
-      Usuario activo
-    </label>
-
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
-      <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">Guardar</ui-button>
-    </div>
-  </form>
-</ui-modal>
-
-<ui-modal [open]="passwordModalAbierto()" title="Contraseña temporal" (closed)="passwordModalAbierto.set(false)">
-  <p class="password-hint">
-    Copia esta contraseña y compártela con el usuario. No podrás volver a verla después de cerrar esta ventana.
-  </p>
-  <div class="password-box">
-    <code>{{ passwordTemporal() }}</code>
-    <button type="button" (click)="copiarPassword()">{{ copiado() ? 'Copiado ✓' : 'Copiar' }}</button>
-  </div>
-</ui-modal>
-
-<confirm-dialog
-  [open]="confirmEliminarAbierto()"
-  title="Eliminar usuario"
-  [message]="'¿Seguro que quieres eliminar a ' + (usuarioAEliminar()?.nombre ?? '') + '? Esta acción no se puede deshacer.'"
-  confirmLabel="Eliminar"
-  [loading]="eliminando()"
-  (confirmed)="confirmarEliminar()"
-  (cancelled)="confirmEliminarAbierto.set(false)"
-></confirm-dialog>

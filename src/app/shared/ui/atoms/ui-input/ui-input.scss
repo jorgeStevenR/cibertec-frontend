@@ -23,7 +23,16 @@ input {
     border-color: var(--danger, #ff6b64);
   }
 
+  &.con-boton {
+    padding-right: 44px;
+  }
+
   &:disabled {
     opacity: 0.6;
+  }
+
+  &::-ms-reveal,
+  &::-ms-clear {
+    display: none;
   }
 }

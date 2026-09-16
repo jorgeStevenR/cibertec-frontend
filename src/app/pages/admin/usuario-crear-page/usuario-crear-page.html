@@ -1,0 +1,55 @@
+<a class="back-link" routerLink="/gestor-usuarios">← Volver a usuarios</a>
+
+<div class="page-header">
+  <h1>Nuevo usuario</h1>
+  <p class="subtitle">Crea una cuenta de docente o estudiante.</p>
+</div>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<div class="card">
+  <h2>Información de la cuenta</h2>
+  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="form">
+    <form-field
+      label="Nombre"
+      inputId="nombre"
+      [control]="form.controls.nombre"
+      errorMessage="El nombre es obligatorio"
+    ></form-field>
+
+    <form-field
+      label="Apellido"
+      inputId="apellido"
+      [control]="form.controls.apellido"
+      errorMessage="El apellido es obligatorio"
+    ></form-field>
+
+    <form-field
+      label="Correo electrónico"
+      inputId="email"
+      type="email"
+      [control]="form.controls.email"
+      errorMessage="Ingresa un correo válido"
+    ></form-field>
+
+    <form-field
+      label="Contraseña"
+      inputId="password"
+      type="password"
+      [control]="form.controls.password"
+      errorMessage="Mínimo 8 caracteres"
+    ></form-field>
+
+    <select-field
+      label="Rol"
+      inputId="rol"
+      [control]="form.controls.rol"
+      [options]="opcionesRol"
+      errorMessage="Selecciona un rol"
+    ></select-field>
+
+    <div class="form-actions campo-ancho">
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">Crear cuenta</ui-button>
+    </div>
+  </form>
+</div>

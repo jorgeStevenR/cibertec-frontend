@@ -8,6 +8,24 @@
 
 <ui-alert [message]="error()"></ui-alert>
 
+<div class="filtros-row">
+  <select-field
+    label="Filtrar por profesor"
+    inputId="filtro-profesor"
+    [control]="filtroProfesor"
+    [options]="opcionesProfesorFiltro"
+    [hideLabel]="true"
+  ></select-field>
+
+  <select-field
+    label="Filtrar por programa"
+    inputId="filtro-programa"
+    [control]="filtroPrograma"
+    [options]="opcionesProgramaFiltro"
+    [hideLabel]="true"
+  ></select-field>
+</div>
+
 <data-table
   [columns]="columnas"
   [rows]="cursos()"

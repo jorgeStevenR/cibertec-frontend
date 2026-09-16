@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin.guard';
+import { gestorUsuariosGuard } from './core/guards/gestor-usuarios.guard';
 import { profesorGuard } from './core/guards/profesor.guard';
 import { estudianteGuard } from './core/guards/estudiante.guard';
 
@@ -19,6 +20,13 @@ export const routes: Routes = [
         path: 'usuarios',
         loadComponent: () =>
           import('./pages/admin/usuarios-page/usuarios-page').then((m) => m.UsuariosPage),
+      },
+      {
+        path: 'usuarios/:usuarioId',
+        loadComponent: () =>
+          import('./pages/admin/usuario-detalle-page/usuario-detalle-page').then(
+            (m) => m.UsuarioDetallePage,
+          ),
       },
       {
         path: 'programas',
@@ -46,6 +54,32 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin/modulo-detalle-page/modulo-detalle-page').then(
             (m) => m.ModuloDetallePage,
+          ),
+      },
+    ],
+  },
+  {
+    path: 'gestor-usuarios',
+    loadComponent: () =>
+      import('./pages/gestor-usuarios-layout/gestor-usuarios-layout').then((m) => m.GestorUsuariosLayout),
+    canActivate: [gestorUsuariosGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./pages/admin/usuarios-page/usuarios-page').then((m) => m.UsuariosPage),
+      },
+      {
+        path: 'nuevo',
+        loadComponent: () =>
+          import('./pages/admin/usuario-crear-page/usuario-crear-page').then((m) => m.UsuarioCrearPage),
+      },
+      {
+        path: ':usuarioId',
+        loadComponent: () =>
+          import('./pages/admin/usuario-detalle-page/usuario-detalle-page').then(
+            (m) => m.UsuarioDetallePage,
           ),
       },
     ],

@@ -3,6 +3,7 @@ import { TipoContenido } from '../models/contenido.model';
 
 export const ROL_LABELS: Record<Rol, string> = {
   ADMINISTRADOR: 'Administrador',
+  GESTOR_USUARIOS: 'Gestor de usuarios',
   PROFESOR: 'Profesor',
   ESTUDIANTE: 'Estudiante',
 };

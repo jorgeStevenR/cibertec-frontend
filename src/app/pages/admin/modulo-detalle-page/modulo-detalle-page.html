@@ -28,6 +28,108 @@
   </ng-template>
 </data-table>
 
+<div class="bloques-section" *ngIf="bloques().length > 0">
+  <h3>Bloques</h3>
+  <ul class="bloques-list">
+    <li *ngFor="let bloque of bloques()">
+      <ng-container [ngSwitch]="bloque.tipo">
+        <p *ngSwitchCase="'TEXTO'" class="bloque-texto">{{ bloque.texto }}</p>
+
+        <div *ngSwitchCase="'IMAGEN'" class="bloque-imagen">
+          <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
+            🖼️ {{ bloque.nombreArchivo }}
+          </button>
+        </div>
+
+        <div *ngSwitchCase="'ARCHIVO'" class="bloque-archivo">
+          <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
+            📎 {{ bloque.nombreArchivo }}
+          </button>
+        </div>
+
+        <div *ngSwitchCase="'VIDEO'" class="bloque-video">
+          <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
+        </div>
+
+        <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
+          <img
+            *ngIf="personajeImagenUrls()[bloque.id] as url"
+            [src]="url"
+            [alt]="bloque.nombreArchivo ?? 'Personaje'"
+            class="personaje-imagen"
+          />
+          <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
+            {{ fraseActualPersonaje(bloque) }}
+            <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
+              {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
+            </span>
+          </button>
+        </div>
+      </ng-container>
+    </li>
+  </ul>
+</div>
+
+<div class="actividades-section" *ngIf="actividades().length > 0">
+  <div class="actividades-header">
+    <h3>Actividades</h3>
+  </div>
+
+  <ul class="actividades-list">
+    <li *ngFor="let act of actividades()">
+      <div class="actividad-info">
+        <span class="actividad-titulo">{{ act.titulo }}</span>
+        <p class="actividad-descripcion" *ngIf="act.descripcion">{{ act.descripcion }}</p>
+        <span class="actividad-meta">
+          {{ act.puntajeMaximo }} pts
+          <ng-container *ngIf="act.fechaEntrega"> · Entrega: {{ formatearFecha(act.fechaEntrega) }}</ng-container>
+        </span>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<div class="cuestionarios-section" *ngIf="cuestionarios().length > 0 || cuestionariosError()">
+  <div class="cuestionarios-header">
+    <h3>Cuestionarios</h3>
+  </div>
+
+  <p *ngIf="cuestionariosError()" class="empty-contenidos empty-contenidos-error">
+    No se pudieron cargar los cuestionarios de este módulo — intenta recargar la página.
+  </p>
+
+  <ul class="cuestionarios-list" *ngIf="!cuestionariosError()">
+    <li *ngFor="let cq of cuestionarios()">
+      <div class="cuestionario-info">
+        <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
+        <p class="cuestionario-descripcion" *ngIf="cq.descripcion">{{ cq.descripcion }}</p>
+        <span class="cuestionario-meta">
+          {{ cq.puntajeMaximo }} pts
+          <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
+          <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
+          <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
+          <span *ngIf="cq.disponible === false" class="badge">No disponible</span>
+        </span>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<div class="contenido-personalizable-section">
+  <div class="contenido-personalizable-header">
+    <h3>Contenido personalizable (lienzo)</h3>
+    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirLienzo()">Ver</ui-button>
+  </div>
+</div>
+
+<app-lienzo
+  *ngIf="lienzoAbierto()"
+  [moduloId]="moduloId"
+  [tituloModulo]="modulo()?.titulo ?? ''"
+  [soloLectura]="true"
+  (cerrado)="cerrarLienzo()"
+></app-lienzo>
+
 <ui-modal [open]="subirModalAbierto()" title="Subir archivo" (closed)="cerrarModalSubir()">
   <form [formGroup]="subirForm" (ngSubmit)="subirArchivo()" novalidate class="modal-form">
     <select-field

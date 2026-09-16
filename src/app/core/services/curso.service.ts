@@ -24,7 +24,8 @@ export class CursoService {
 
     if (opciones.profesorId != null) {
       params = params.set('profesorId', opciones.profesorId);
-    } else if (opciones.programaId != null) {
+    }
+    if (opciones.programaId != null) {
       params = params.set('programaId', opciones.programaId);
     }
 

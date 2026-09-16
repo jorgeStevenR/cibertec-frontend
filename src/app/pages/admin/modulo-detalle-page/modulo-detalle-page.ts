@@ -3,7 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
 import { SelectField } from '../../../shared/ui/molecules/select-field/select-field';
 import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
@@ -12,12 +13,20 @@ import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
+import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
+import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
+import { BloqueService } from '../../../core/services/bloque.service';
+import { ActividadService } from '../../../core/services/actividad.service';
+import { CuestionarioService } from '../../../core/services/cuestionario.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido, TipoContenido } from '../../../core/models/contenido.model';
+import { Bloque } from '../../../core/models/bloque.model';
+import { Actividad } from '../../../core/models/actividad.model';
+import { Cuestionario } from '../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -35,6 +44,8 @@ import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/label
     UiAlert,
     DataTable,
     ConfirmDialog,
+    LienzoComponent,
+    EmbedVideoUrlPipe,
   ],
   templateUrl: './modulo-detalle-page.html',
   styleUrl: './modulo-detalle-page.scss',
@@ -44,6 +55,9 @@ export class ModuloDetallePage implements OnInit {
   private readonly cursoService = inject(CursoService);
   private readonly moduloService = inject(ModuloService);
   private readonly contenidoService = inject(ContenidoService);
+  private readonly bloqueService = inject(BloqueService);
+  private readonly actividadService = inject(ActividadService);
+  private readonly cuestionarioService = inject(CuestionarioService);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -52,8 +66,17 @@ export class ModuloDetallePage implements OnInit {
   readonly curso = signal<Curso | null>(null);
   readonly modulo = signal<Modulo | null>(null);
   readonly contenidos = signal<Contenido[]>([]);
+  readonly bloques = signal<Bloque[]>([]);
+  readonly actividades = signal<Actividad[]>([]);
+  readonly cuestionarios = signal<Cuestionario[]>([]);
+  readonly cuestionariosError = signal(false);
   readonly cargando = signal(false);
   readonly error = signal('');
+
+  readonly lienzoAbierto = signal(false);
+  readonly personajeImagenUrls = signal<Record<number, string>>({});
+  readonly personajeFraseIndice = signal<Record<number, number>>({});
+  readonly formatearFecha = formatearFecha;
 
   readonly columnas: DataTableColumn<Contenido>[] = [
     { key: 'nombre', label: 'Nombre' },
@@ -100,12 +123,28 @@ export class ModuloDetallePage implements OnInit {
       curso: this.cursoService.obtener(this.cursoId),
       modulo: this.moduloService.obtener(this.moduloId),
       contenidos: this.contenidoService.listarPorModulo(this.moduloId),
+      bloques: this.bloqueService.listarPorModulo(this.moduloId),
+      actividades: this.actividadService.listarPorModulo(this.moduloId),
+      // Si el backend de cuestionarios falla, no debe tumbar el resto del módulo
+      // (bloques/actividades/contenidos siguen funcionando bien) — mismo patrón
+      // defensivo que EstudianteCursoDetallePage.cargar().
+      cuestionarios: this.cuestionarioService.listarPorModulo(this.moduloId).pipe(
+        catchError((err: HttpErrorResponse) => {
+          console.error(`Fallo al cargar cuestionarios del módulo ${this.moduloId}`, err);
+          this.cuestionariosError.set(true);
+          return of([] as Cuestionario[]);
+        }),
+      ),
     }).subscribe({
-      next: ({ curso, modulo, contenidos }) => {
+      next: ({ curso, modulo, contenidos, bloques, actividades, cuestionarios }) => {
         this.curso.set(curso);
         this.modulo.set(modulo);
         this.contenidos.set(contenidos);
+        this.bloques.set(bloques);
+        this.actividades.set(actividades);
+        this.cuestionarios.set(cuestionarios);
         this.cargando.set(false);
+        this.cargarImagenesPersonaje(bloques.filter((b) => b.tipo === 'PERSONAJE'));
       },
       error: (err: HttpErrorResponse) => {
         this.cargando.set(false);
@@ -120,6 +159,55 @@ export class ModuloDetallePage implements OnInit {
       next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
       error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
     });
+  }
+
+  verBloque(bloque: Bloque): void {
+    this.error.set('');
+    this.bloqueService.obtenerUrl(bloque.id).subscribe({
+      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
+      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
+    });
+  }
+
+  private cargarImagenesPersonaje(bloques: Bloque[]): void {
+    for (const bloque of bloques) {
+      this.bloqueService.obtenerUrl(bloque.id).subscribe({
+        next: (respuesta) => {
+          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
+        },
+      });
+    }
+  }
+
+  frasesPersonaje(bloque: Bloque): string[] {
+    return (bloque.texto ?? '')
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+  }
+
+  fraseActualPersonaje(bloque: Bloque): string {
+    const frases = this.frasesPersonaje(bloque);
+    if (frases.length === 0) {
+      return '';
+    }
+    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
+    return frases[Math.min(indice, frases.length - 1)];
+  }
+
+  siguienteFrasePersonaje(bloque: Bloque): void {
+    const frases = this.frasesPersonaje(bloque);
+    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
+    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
+    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
+  }
+
+  abrirLienzo(): void {
+    this.lienzoAbierto.set(true);
+  }
+
+  cerrarLienzo(): void {
+    this.lienzoAbierto.set(false);
   }
 
   toggleVisibilidad(contenido: Contenido): void {
