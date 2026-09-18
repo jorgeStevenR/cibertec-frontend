@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confi
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
 import { CuestionarioEditorComponent } from '../../../shared/ui/organisms/cuestionario-editor/cuestionario-editor';
 import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
+import { CursoDatos } from '../../../shared/ui/molecules/curso-datos/curso-datos';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
@@ -52,6 +53,7 @@ type Tab = 'curso' | 'participantes';
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
+    CursoDatos,
     UiAlert,
     UiButton,
     FormField,

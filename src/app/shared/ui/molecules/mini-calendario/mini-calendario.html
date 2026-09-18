@@ -1,0 +1,67 @@
+<section class="calendario" aria-label="Calendario">
+  <h2>Calendario</h2>
+
+  <div class="mes-nav">
+    <button type="button" class="nav-btn" (click)="mesAnterior()" aria-label="Mes anterior">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <span class="mes-etiqueta" aria-live="polite">{{ etiquetaMes() }}</span>
+    <button type="button" class="nav-btn" (click)="mesSiguiente()" aria-label="Mes siguiente">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th *ngFor="let d of diasSemana" scope="col">{{ d }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let semana of semanas()">
+        <td *ngFor="let celda of semana">
+          <ng-container *ngIf="celda">
+            <span
+              class="dia"
+              [class.hoy]="celda.clave === claveHoy"
+              [ngClass]="claseDia(celda.clave)"
+              [attr.title]="titulosDelDia(celda.clave) || null"
+              [attr.aria-label]="titulosDelDia(celda.clave) ? celda.dia + ': ' + titulosDelDia(celda.clave) : null"
+            >
+              {{ celda.dia }}
+            </span>
+          </ng-container>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="leyenda">
+    <span class="leyenda-item"><span class="punto punto-pendiente"></span>Pendiente</span>
+    <span class="leyenda-item"><span class="punto punto-vencido"></span>Vencida</span>
+    <span class="leyenda-item"><span class="punto punto-completado"></span>Hecha</span>
+  </div>
+
+  <div class="proximos">
+    <h3>Vencimientos del mes</h3>
+    <p class="vacio vacio-error" *ngIf="error()">No se pudieron cargar tus vencimientos. Intenta recargar la página.</p>
+    <p class="vacio" *ngIf="!error() && visibles().length === 0">No tienes actividades ni cuestionarios con fecha este mes.</p>
+    <ul *ngIf="!error() && visibles().length > 0">
+      <li *ngFor="let e of visibles()" [class.hecho]="e.estado === 'ENTREGADA' || e.estado === 'RENDIDO'">
+        <span class="fecha">{{ formatearDia(e.fecha) }}</span>
+        <span class="detalle">
+          <span class="titulo">{{ e.titulo }}</span>
+          <span class="curso">{{ e.curso }}</span>
+          <span class="estado" *ngIf="textoEstado(e.estado)" [class.estado-vencida]="e.estado === 'VENCIDA'">
+            {{ textoEstado(e.estado) }}
+          </span>
+        </span>
+      </li>
+    </ul>
+    <p class="mas" *ngIf="!error() && ocultos() > 0">y {{ ocultos() }} más este mes</p>
+  </div>
+</section>

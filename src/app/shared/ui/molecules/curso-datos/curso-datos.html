@@ -1,0 +1,9 @@
+<div class="datos-curso">
+  <span class="dato"><small>Código</small> {{ codigo() ?? '—' }}</span>
+  <span class="dato"><small>Período</small> {{ periodo() ?? '—' }}</span>
+  <span class="dato"><small>Fechas</small> {{ fechas() }}</span>
+  <span class="dato" *ngIf="matriculados() !== null">
+    <small>Cupo</small>
+    <cupo-estado [matriculados]="matriculados()!" [cupoMaximo]="cupoMaximo()"></cupo-estado>
+  </span>
+</div>

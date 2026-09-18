@@ -73,7 +73,7 @@ export class UsuarioDetallePage implements OnInit {
     const objetivo = this.usuario();
     return this.puedeGestionar() && objetivo != null && objetivo.rol !== 'ADMINISTRADOR' && objetivo.rol !== 'GESTOR_USUARIOS';
   });
-  readonly volverUrl = computed(() => (this.puedeGestionar() ? '/gestor-usuarios' : '/admin/usuarios'));
+  readonly volverUrl = computed(() => (this.puedeGestionar() ? '/gestor-usuarios/usuarios' : '/admin/usuarios'));
 
   readonly guardando = signal(false);
   readonly guardado = signal(false);

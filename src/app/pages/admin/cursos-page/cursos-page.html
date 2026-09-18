@@ -1,10 +1,9 @@
-<div class="page-header">
-  <div>
-    <h1>Cursos</h1>
-    <p class="subtitle">Crea cursos y asígnalos a un profesor.</p>
-  </div>
-  <ui-button [fullWidth]="false" (pressed)="abrirCrear()">Nuevo curso</ui-button>
-</div>
+<page-header
+  titulo="Cursos"
+  subtitulo="Crea cursos, asígnalos a un profesor y a un programa, y gestiona sus módulos y matrículas."
+>
+  <ui-button [fullWidth]="false" [routerLink]="['/admin', 'cursos', 'nuevo']">Nuevo curso</ui-button>
+</page-header>
 
 <ui-alert [message]="error()"></ui-alert>
 
@@ -30,13 +29,32 @@
   [columns]="columnas"
   [rows]="cursos()"
   [loading]="cargando()"
-  emptyMessage="Todavía no hay cursos creados."
+  [emptyMessage]="hayFiltros ? 'No hay cursos que coincidan con los filtros.' : 'Todavía no hay cursos creados.'"
 >
+  <ng-template dataTableCell="titulo" let-curso>
+    <div class="curso-celda">
+      <span class="curso-codigo">{{ curso.codigo ?? 'Sin código' }}</span>
+      <a class="curso-titulo" [routerLink]="['/admin', 'cursos', curso.id]">{{ curso.titulo }}</a>
+      <span class="curso-programa">{{ curso.programaNombre ?? 'Sin programa asignado' }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template dataTableCell="fechas" let-curso>
+    <div class="fechas-celda" *ngIf="curso.fechaInicio || curso.fechaFin; else sinFechas">
+      <span><small>Desde</small> {{ formatearFechaCalendario(curso.fechaInicio) }}</span>
+      <span><small>Hasta</small> {{ formatearFechaCalendario(curso.fechaFin) }}</span>
+    </div>
+    <ng-template #sinFechas>—</ng-template>
+  </ng-template>
+
+  <ng-template dataTableCell="cupo" let-curso>
+    <cupo-estado [matriculados]="curso.matriculados" [cupoMaximo]="curso.cupoMaximo"></cupo-estado>
+  </ng-template>
+
   <ng-template #actions let-curso>
-    <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', curso.id]">
-      Ver módulos
+    <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', curso.id, 'editar']">
+      Editar
     </ui-button>
-    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(curso)">Editar</ui-button>
     <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(curso)">Eliminar</ui-button>
   </ng-template>
 </data-table>
@@ -48,59 +66,10 @@
   (cambiarPagina)="cambiarPagina($event)"
 ></ui-pagination>
 
-<ui-modal
-  [open]="modalAbierto()"
-  [title]="modoEdicion() ? 'Editar curso' : 'Nuevo curso'"
-  (closed)="cerrarModal()"
->
-  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="modal-form">
-    <form-field
-      label="Título"
-      inputId="titulo"
-      [control]="form.controls.titulo"
-      errorMessage="El título es obligatorio"
-    ></form-field>
-
-    <textarea-field
-      label="Descripción"
-      inputId="descripcion"
-      [control]="form.controls.descripcion"
-      [rows]="4"
-    ></textarea-field>
-
-    <select-field
-      *ngIf="!modoEdicion()"
-      label="Profesor"
-      inputId="profesorId"
-      [control]="form.controls.profesorId"
-      [options]="opcionesProfesor"
-      errorMessage="Selecciona un profesor"
-    ></select-field>
-
-    <select-field
-      label="Programa"
-      inputId="programaId"
-      [control]="form.controls.programaId"
-      [options]="opcionesPrograma"
-      errorMessage="Selecciona un programa"
-    ></select-field>
-
-    <label class="checkbox-row" *ngIf="modoEdicion()">
-      <input type="checkbox" [formControl]="form.controls.publicado" />
-      Curso publicado
-    </label>
-
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
-      <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">Guardar</ui-button>
-    </div>
-  </form>
-</ui-modal>
-
 <confirm-dialog
   [open]="confirmEliminarAbierto()"
   title="Eliminar curso"
-  [message]="'¿Seguro que quieres eliminar \'' + (cursoAEliminar()?.titulo ?? '') + '\'? Esta acción no se puede deshacer.'"
+  [message]="'¿Seguro que quieres eliminar «' + (cursoAEliminar()?.titulo ?? '') + '»? Esta acción no se puede deshacer.'"
   confirmLabel="Eliminar"
   [loading]="eliminando()"
   (confirmed)="confirmarEliminar()"

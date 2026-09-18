@@ -18,3 +18,9 @@ export function extraerMensajeError(
 
   return cuerpo.message;
 }
+
+// Errores de validación por campo (400 con `errores`), o null si el backend no los mandó.
+export function extraerErroresPorCampo(error: HttpErrorResponse): Record<string, string> | null {
+  const errores = (error.error as Partial<ErrorResponse> | null)?.errores;
+  return errores && Object.keys(errores).length > 0 ? errores : null;
+}

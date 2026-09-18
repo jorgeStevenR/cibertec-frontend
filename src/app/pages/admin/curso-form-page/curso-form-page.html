@@ -1,0 +1,160 @@
+<page-header
+  [titulo]="modoEdicion ? 'Editar curso' : 'Nuevo curso'"
+  [subtitulo]="
+    modoEdicion
+      ? 'Actualiza los datos del curso. Los módulos y las matrículas se gestionan desde el curso.'
+      : 'Completa los datos, asigna un profesor y un programa. Después podrás agregar módulos y matricular estudiantes.'
+  "
+  [volverA]="volverUrl"
+  [volverEtiqueta]="volverEtiqueta"
+></page-header>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p class="estado-carga" *ngIf="cargando()">Cargando…</p>
+
+<div class="pagina" [class.con-lateral]="!modoEdicion" *ngIf="!cargando() && !(error() && !programas().length)">
+  <panel-seccion titulo="Información del curso">
+    <p class="aviso" *ngIf="faltanDatosAcademicos()" role="status">
+      Este curso se creó antes de que existieran el código, el período y las fechas. Complétalos para poder guardar.
+    </p>
+
+    <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="formulario">
+      <div class="campo campo-doble">
+        <form-field
+          label="Título"
+          inputId="titulo"
+          [requerido]="true"
+          [control]="form.controls.titulo"
+          [errorMessage]="mensajeCampo('titulo')"
+        ></form-field>
+      </div>
+
+      <div class="campo">
+        <form-field
+          label="Código"
+          inputId="codigo"
+          [requerido]="true"
+          placeholder="Ej. WFS-2026-B"
+          [control]="form.controls.codigo"
+          [errorMessage]="mensajeCampo('codigo')"
+        ></form-field>
+      </div>
+
+      <div class="campo">
+        <select-field
+          label="Programa"
+          inputId="programaId"
+          [requerido]="true"
+          [control]="form.controls.programaId"
+          [options]="opcionesPrograma()"
+          [errorMessage]="mensajeCampo('programaId')"
+        ></select-field>
+      </div>
+
+      <div class="campo">
+        <select-field
+          label="Profesor"
+          inputId="profesorId"
+          [requerido]="true"
+          [control]="form.controls.profesorId"
+          [options]="opcionesProfesor()"
+          [errorMessage]="mensajeCampo('profesorId')"
+        ></select-field>
+        <p class="ayuda" *ngIf="modoEdicion">No se puede cambiar una vez creado el curso.</p>
+      </div>
+
+      <div class="campo">
+        <form-field
+          label="Período"
+          inputId="periodo"
+          [requerido]="true"
+          placeholder="Ej. 2026-2"
+          [control]="form.controls.periodo"
+          [errorMessage]="mensajeCampo('periodo')"
+        ></form-field>
+      </div>
+
+      <div class="campo">
+        <form-field
+          label="Fecha de inicio"
+          inputId="fechaInicio"
+          type="date"
+          [requerido]="true"
+          [control]="form.controls.fechaInicio"
+          [errorMessage]="mensajeCampo('fechaInicio')"
+        ></form-field>
+      </div>
+
+      <div class="campo">
+        <form-field
+          label="Fecha de fin"
+          inputId="fechaFin"
+          type="date"
+          [requerido]="true"
+          [control]="form.controls.fechaFin"
+          [errorMessage]="mensajeCampo('fechaFin')"
+        ></form-field>
+      </div>
+
+      <div class="campo">
+        <form-field
+          label="Cupo máximo"
+          inputId="cupoMaximo"
+          type="number"
+          placeholder="Sin límite"
+          [control]="form.controls.cupoMaximo"
+          [errorMessage]="mensajeCampo('cupoMaximo')"
+        ></form-field>
+        <p class="ayuda" *ngIf="!modoEdicion">Déjalo vacío si el curso no tiene límite de estudiantes.</p>
+        <p class="ayuda" *ngIf="modoEdicion && curso() as c">
+          {{ c.matriculados }} {{ c.matriculados === 1 ? 'estudiante matriculado' : 'estudiantes matriculados' }}: el
+          cupo no puede quedar por debajo. Vacío = sin límite.
+        </p>
+      </div>
+
+      <div class="campo" *ngIf="modoEdicion">
+        <select-field
+          label="Estado"
+          inputId="publicado"
+          [control]="form.controls.publicado"
+          [options]="opcionesEstado"
+        ></select-field>
+      </div>
+
+      <div class="campo campo-completo">
+        <textarea-field
+          label="Descripción"
+          inputId="descripcion"
+          [control]="form.controls.descripcion"
+          [rows]="5"
+          placeholder="Qué se aprende en este curso, a quién va dirigido…"
+        ></textarea-field>
+      </div>
+
+      <div class="acciones campo-completo">
+        <a class="cancelar" [routerLink]="volverUrl">Cancelar</a>
+        <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">
+          {{ modoEdicion ? 'Guardar cambios' : 'Crear curso' }}
+        </ui-button>
+      </div>
+    </form>
+  </panel-seccion>
+
+  <panel-seccion *ngIf="!modoEdicion" titulo="Después de crear el curso">
+    <ol class="pasos">
+      <li>
+        <strong>Agrega módulos</strong>
+        <span>Organiza el contenido del curso en módulos.</span>
+      </li>
+      <li>
+        <strong>Matricula estudiantes</strong>
+        <span>Elige quiénes cursan esta materia; si defines un cupo, no se podrá superar.</span>
+      </li>
+      <li>
+        <strong>Publícalo</strong>
+        <span>Nace como borrador; los estudiantes lo ven cuando lo publiques desde «Editar».</span>
+      </li>
+    </ol>
+  </panel-seccion>
+</div>

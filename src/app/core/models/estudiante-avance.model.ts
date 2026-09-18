@@ -1,0 +1,54 @@
+export type TipoItem = 'ACTIVIDAD' | 'CUESTIONARIO';
+export type EstadoVencimiento = 'PENDIENTE' | 'ENTREGADA' | 'RENDIDO' | 'VENCIDA';
+export type EstadoCalificacion = 'SIN_ENTREGAR' | 'ENTREGADA' | 'CALIFICADA' | 'RENDIDO';
+
+export interface ResumenCurso {
+  cursoId: number;
+  // Fechas de calendario "yyyy-MM-dd" del curso; null si el curso no las tiene.
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  totalActividades: number;
+  actividadesEntregadas: number;
+  actividadesPendientes: number;
+  totalCuestionarios: number;
+  cuestionariosRendidos: number;
+  cuestionariosPendientes: number;
+  // Viene calculado por el backend (0-100); no se recalcula en el frontend.
+  porcentajeCompletado: number;
+}
+
+export interface Vencimiento {
+  tipo: TipoItem;
+  id: number;
+  titulo: string;
+  cursoId: number;
+  cursoTitulo: string;
+  moduloId: number;
+  fechaLimite: string;
+  estado: EstadoVencimiento;
+}
+
+export interface CalificacionItem {
+  tipo: TipoItem;
+  id: number;
+  titulo: string;
+  moduloId: number;
+  moduloTitulo: string;
+  puntajeMaximo: number;
+  nota: number | null;
+  estado: EstadoCalificacion;
+  fechaEntrega: string | null;
+  fechaCalificacion: string | null;
+  comentarioDocente: string | null;
+}
+
+export interface CalificacionesCurso {
+  cursoId: number;
+  cursoTitulo: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  // Suman solo los ítems ya calificados: un curso sin nada calificado llega como 0 / 0.
+  puntajeObtenido: number;
+  puntajeMaximoCalificado: number;
+  items: CalificacionItem[];
+}

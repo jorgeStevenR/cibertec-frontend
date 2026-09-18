@@ -1,3 +1,21 @@
 <footer class="app-footer">
-  <p>© {{ anio }} Cibertec — Plataforma educativa. Todos los derechos reservados.</p>
+  <div class="footer-inner">
+    <img class="footer-logo" src="/logo-ciberctec.png" alt="Ciberctec" />
+
+    <div class="footer-texto">
+      <ul class="sedes">
+        <li *ngFor="let s of sedes">
+          <span class="sede">{{ s.sede }}</span>
+          <span class="telefonos">{{ s.telefonos }}</span>
+        </li>
+      </ul>
+
+      <p class="soporte">
+        ¿Necesitas ayuda con tu usuario o contraseña? Escríbenos a
+        <a [href]="'mailto:' + correoSoporte">{{ correoSoporte }}</a>
+      </p>
+
+      <p class="derechos">© {{ anio }} Cibertec. Plataforma educativa. Todos los derechos reservados.</p>
+    </div>
+  </div>
 </footer>

@@ -1,0 +1,66 @@
+<page-header titulo="Inicio" subtitulo="Cómo van las cuentas de la plataforma.">
+  <a class="accion-principal" routerLink="/gestor-usuarios/usuarios/nuevo">Nuevo usuario</a>
+</page-header>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p class="estado" role="status" *ngIf="cargando()">Cargando el resumen…</p>
+
+<ng-container *ngIf="datos() as d">
+  <div class="kpis">
+    <kpi-tile etiqueta="Cuentas" [valor]="d.totalCuentas" apoyo="Todas las cuentas registradas"></kpi-tile>
+    <kpi-tile etiqueta="Estudiantes" [valor]="d.estudiantes" [apoyo]="d.estudiantesActivos + ' con cuenta activa'"></kpi-tile>
+    <kpi-tile etiqueta="Profesores" [valor]="d.profesores" [apoyo]="d.profesoresActivos + ' con cuenta activa'"></kpi-tile>
+    <kpi-tile
+      etiqueta="Inactivas"
+      [valor]="d.resumen.inactivos"
+      [apoyo]="d.resumen.inactivos === 1 ? 'Cuenta desactivada' : 'Cuentas desactivadas'"
+    ></kpi-tile>
+  </div>
+
+  <p class="aviso" *ngIf="d.parcial">
+    Hay más cuentas de las que caben en una carga: las gráficas se calculan con las primeras 500.
+  </p>
+
+  <div class="paneles">
+    <panel-seccion titulo="Altas de cuentas por mes" class="span-8">
+      <grafico-area [puntos]="d.resumen.altasPorMes" descripcion="Altas de cuentas por mes"></grafico-area>
+    </panel-seccion>
+
+    <panel-seccion titulo="Cuentas por rol" class="span-4">
+      <grafico-dona [segmentos]="d.segmentosRoles" centroEtiqueta="cuentas" descripcion="Cuentas por rol"></grafico-dona>
+    </panel-seccion>
+
+    <panel-seccion titulo="Activas e inactivas por rol" class="span-6">
+      <grafico-barras
+        *ngIf="d.barrasEstado.length > 0; else sinCuentas"
+        [items]="d.barrasEstado"
+        nombreValor="Activas"
+        nombreExtra="Inactivas"
+        descripcion="Cuentas activas e inactivas por rol"
+      ></grafico-barras>
+      <ng-template #sinCuentas>
+        <p class="vacio">Todavía no hay cuentas registradas.</p>
+      </ng-template>
+    </panel-seccion>
+
+    <panel-seccion titulo="Últimas cuentas creadas" class="span-6" [sinRelleno]="true">
+      <p class="vacio vacio-relleno" *ngIf="d.resumen.ultimos.length === 0">Todavía no hay cuentas registradas.</p>
+      <ul class="lista" *ngIf="d.resumen.ultimos.length > 0">
+        <li *ngFor="let u of d.resumen.ultimos">
+          <a [routerLink]="['/gestor-usuarios', 'usuarios', u.id]">
+            <span class="avatar" aria-hidden="true">{{ iniciales(u) }}</span>
+            <span class="lista-texto">
+              <span class="lista-titulo">{{ u.nombre }} {{ u.apellido }}</span>
+              <span class="lista-detalle">{{ u.email }}</span>
+            </span>
+            <span class="lista-lado">
+              <span class="insignia">{{ rolLabels[u.rol] }}</span>
+              <span class="lista-fecha">{{ formatearFecha(u.fechaCreacion) }}</span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </panel-seccion>
+  </div>
+</ng-container>

@@ -1,29 +1,61 @@
 <div class="curso-card">
-  <div class="card-top">
-    <span class="codigo" *ngIf="codigo()">{{ codigo() }}</span>
-    <span class="badge" [class.badge-on]="publicado()">{{ publicado() ? 'Publicado' : 'Borrador' }}</span>
+  <div class="card-body">
+    <div class="card-top">
+      <span class="codigo" *ngIf="codigo()">{{ codigo() }}</span>
+      <span class="badge" [class.badge-on]="publicado()">{{ publicado() ? 'Publicado' : 'Borrador' }}</span>
+    </div>
+
+    <h3>{{ titulo() }}</h3>
+
+    <button
+      type="button"
+      class="participantes-btn"
+      *ngIf="mostrarParticipantes()"
+      (click)="participantesClick.emit()"
+    >
+      👥 Participantes
+    </button>
+
+    <span class="pendientes" *ngIf="pendientes() !== null" [class.al-dia]="pendientes() === 0">
+      {{ pendientes() }} {{ pendientes() === 1 ? 'actividad pendiente' : 'actividades pendientes' }}
+    </span>
+
+    <p class="vigencia" *ngIf="vigencia()">{{ vigencia() }}</p>
+
+    <cupo-estado *ngIf="matriculados() !== null" [matriculados]="matriculados()!" [cupoMaximo]="cupoMaximo()"></cupo-estado>
+
+    <ul class="meta-list" *ngIf="meta().length > 0">
+      <li *ngFor="let linea of meta()">{{ linea }}</li>
+    </ul>
+
+    <div class="docente" *ngIf="docenteNombre()">
+      <span class="docente-label">Docente</span>
+      <span class="docente-nombre">{{ docenteNombre() }}</span>
+      <span class="docente-email" *ngIf="docenteEmail()">{{ docenteEmail() }}</span>
+    </div>
+
+    <a class="card-action" [routerLink]="routerLinkTarget()">{{ actionLabel() }}</a>
   </div>
 
-  <h3>{{ titulo() }}</h3>
-
-  <button
-    type="button"
-    class="participantes-btn"
-    *ngIf="mostrarParticipantes()"
-    (click)="participantesClick.emit()"
-  >
-    👥 Participantes
-  </button>
-
-  <ul class="meta-list" *ngIf="meta().length > 0">
-    <li *ngFor="let linea of meta()">{{ linea }}</li>
-  </ul>
-
-  <div class="docente" *ngIf="docenteNombre()">
-    <span class="docente-label">Docente</span>
-    <span class="docente-nombre">{{ docenteNombre() }}</span>
-    <span class="docente-email" *ngIf="docenteEmail()">{{ docenteEmail() }}</span>
+  <div class="card-progreso" *ngIf="progreso() !== null || reservarProgreso()">
+    <div class="progreso-cabecera">
+      <ng-container *ngIf="progreso() !== null; else sinAvance">
+        <span class="progreso-valor">{{ progreso() }}% completado</span>
+        <span class="progreso-detalle" *ngIf="progresoDetalle()">{{ progresoDetalle() }}</span>
+      </ng-container>
+      <ng-template #sinAvance>
+        <span class="progreso-vacio">{{ publicado() ? 'Sin avance todavía' : 'Curso no publicado' }}</span>
+      </ng-template>
+    </div>
+    <div
+      class="progreso-barra"
+      role="progressbar"
+      aria-label="Avance del curso"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="progreso() ?? 0"
+    >
+      <span [style.width.%]="progreso() ?? 0"></span>
+    </div>
   </div>
-
-  <a class="card-action" [routerLink]="routerLinkTarget()">{{ actionLabel() }}</a>
 </div>

@@ -16,12 +16,16 @@
 <div class="cursos-grid" *ngIf="!cargando() && cursos().length > 0">
   <curso-card
     *ngFor="let curso of cursosPagina()"
-    [codigo]="'CURSO-' + curso.id"
+    [codigo]="curso.codigo ?? ''"
     [titulo]="curso.titulo"
     [publicado]="curso.publicado"
+    [periodo]="curso.periodo"
+    [fechaInicio]="curso.fechaInicio"
+    [fechaFin]="curso.fechaFin"
+    [matriculados]="curso.matriculados"
+    [cupoMaximo]="curso.cupoMaximo"
     [meta]="[
       curso.totalModulos + ' ' + (curso.totalModulos === 1 ? 'módulo' : 'módulos'),
-      curso.totalEstudiantes + ' ' + (curso.totalEstudiantes === 1 ? 'estudiante matriculado' : 'estudiantes matriculados'),
       'Creado el ' + formatearFecha(curso.fechaCreacion)
     ]"
     [routerLinkTarget]="['/profesor', 'cursos', curso.id]"

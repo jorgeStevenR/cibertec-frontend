@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.volver {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #606770);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--bright, #1877f2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bright, #1877f2);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--navy, #0c2b6b);
+}
+
+.subtitulo {
+  margin: 6px 0 0;
+  max-width: 640px;
+  font-size: 14.5px;
+  color: var(--text-secondary, #606770);
+}
+
+.page-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}

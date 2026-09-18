@@ -1,5 +1,5 @@
 <div class="field">
-  <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}</label>
+  <label [for]="inputId()" [class.sr-only]="hideLabel()">{{ label() }}<span class="requerido" *ngIf="requerido()" aria-hidden="true"> *</span><span class="sr-only" *ngIf="requerido()"> (obligatorio)</span></label>
   <ui-select
     [inputId]="inputId()"
     [options]="options()"

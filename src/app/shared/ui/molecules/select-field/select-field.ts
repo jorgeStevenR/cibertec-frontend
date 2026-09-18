@@ -18,6 +18,7 @@ export class SelectField {
   readonly placeholder = input('Selecciona una opción');
   readonly errorMessage = input('');
   readonly hideLabel = input(false);
+  readonly requerido = input(false);
 
   get invalido(): boolean {
     const c = this.control();

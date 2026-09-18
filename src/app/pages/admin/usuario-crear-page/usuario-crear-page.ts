@@ -63,7 +63,7 @@ export class UsuarioCrearPage {
       .subscribe({
         next: () => {
           this.guardando.set(false);
-          this.router.navigateByUrl('/gestor-usuarios');
+          this.router.navigateByUrl('/gestor-usuarios/usuarios');
         },
         error: (err: HttpErrorResponse) => {
           this.guardando.set(false);

@@ -15,7 +15,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/admin/admin-layout/admin-layout').then((m) => m.AdminLayout),
     canActivate: [adminGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'usuarios' },
+      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
+      {
+        path: 'inicio',
+        loadComponent: () =>
+          import('./pages/admin/inicio-page/inicio-page').then((m) => m.AdminInicioPage),
+      },
       {
         path: 'usuarios',
         loadComponent: () =>
@@ -45,6 +50,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/cursos-page/cursos-page').then((m) => m.CursosPage),
       },
       {
+        path: 'cursos/nuevo',
+        loadComponent: () =>
+          import('./pages/admin/curso-form-page/curso-form-page').then((m) => m.CursoFormPage),
+      },
+      {
+        path: 'cursos/:cursoId/editar',
+        loadComponent: () =>
+          import('./pages/admin/curso-form-page/curso-form-page').then((m) => m.CursoFormPage),
+      },
+      {
         path: 'cursos/:cursoId',
         loadComponent: () =>
           import('./pages/admin/curso-detalle-page/curso-detalle-page').then((m) => m.CursoDetallePage),
@@ -64,19 +79,26 @@ export const routes: Routes = [
       import('./pages/gestor-usuarios-layout/gestor-usuarios-layout').then((m) => m.GestorUsuariosLayout),
     canActivate: [gestorUsuariosGuard],
     children: [
+      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
       {
-        path: '',
-        pathMatch: 'full',
+        path: 'inicio',
+        loadComponent: () =>
+          import('./pages/gestor-usuarios-inicio-page/gestor-usuarios-inicio-page').then(
+            (m) => m.GestorUsuariosInicioPage,
+          ),
+      },
+      {
+        path: 'usuarios',
         loadComponent: () =>
           import('./pages/admin/usuarios-page/usuarios-page').then((m) => m.UsuariosPage),
       },
       {
-        path: 'nuevo',
+        path: 'usuarios/nuevo',
         loadComponent: () =>
           import('./pages/admin/usuario-crear-page/usuario-crear-page').then((m) => m.UsuarioCrearPage),
       },
       {
-        path: ':usuarioId',
+        path: 'usuarios/:usuarioId',
         loadComponent: () =>
           import('./pages/admin/usuario-detalle-page/usuario-detalle-page').then(
             (m) => m.UsuarioDetallePage,
@@ -116,6 +138,13 @@ export const routes: Routes = [
         pathMatch: 'full',
         loadComponent: () =>
           import('./pages/estudiante/cursos-page/cursos-page').then((m) => m.EstudianteCursosPage),
+      },
+      {
+        path: 'calificaciones',
+        loadComponent: () =>
+          import('./pages/estudiante/calificaciones-page/calificaciones-page').then(
+            (m) => m.EstudianteCalificacionesPage,
+          ),
       },
       {
         path: 'cursos/:cursoId',

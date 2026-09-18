@@ -10,6 +10,7 @@ import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-ta
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
 import { CuestionarioResponderComponent } from '../../../shared/ui/organisms/cuestionario-responder/cuestionario-responder';
 import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
+import { CursoDatos } from '../../../shared/ui/molecules/curso-datos/curso-datos';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
@@ -46,6 +47,7 @@ type Tab = 'curso' | 'participantes';
   imports: [
     CommonModule,
     RouterLink,
+    CursoDatos,
     UiAlert,
     UiButton,
     DataTable,

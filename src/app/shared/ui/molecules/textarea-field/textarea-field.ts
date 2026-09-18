@@ -18,6 +18,7 @@ export class TextareaField {
   readonly rows = input(4);
   readonly errorMessage = input('');
   readonly hideLabel = input(false);
+  readonly requerido = input(false);
 
   get invalido(): boolean {
     const c = this.control();

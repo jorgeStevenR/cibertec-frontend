@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
 import { SelectField } from '../../../shared/ui/molecules/select-field/select-field';
+import { CursoDatos } from '../../../shared/ui/molecules/curso-datos/curso-datos';
 import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -22,6 +23,7 @@ import { Matricula } from '../../../core/models/matricula.model';
 import { Usuario } from '../../../core/models/usuario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { formatearFecha } from '../../../core/utils/labels.util';
+import { datosAcademicosCompletos, estadoCupo } from '../../../core/utils/curso.util';
 
 // El backend pagina /api/usuarios (default 20), pero acá necesitamos "todos"
 // para poder buscar nombres de profesor/estudiante y poblar el dropdown de matrícula.
@@ -36,6 +38,7 @@ const TAMANO_LOOKUP_USUARIOS = 500;
     RouterLink,
     FormField,
     SelectField,
+    CursoDatos,
     UiModal,
     UiButton,
     UiAlert,
@@ -56,6 +59,14 @@ export class CursoDetallePage implements OnInit {
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
   readonly curso = signal<Curso | null>(null);
+  readonly cursoLleno = computed(() => {
+    const curso = this.curso();
+    return curso !== null && estadoCupo(curso.matriculados, curso.cupoMaximo) === 'lleno';
+  });
+  readonly faltanDatosAcademicos = computed(() => {
+    const curso = this.curso();
+    return curso !== null && !datosAcademicosCompletos(curso);
+  });
   readonly modulos = signal<Modulo[]>([]);
   readonly matriculas = signal<Matricula[]>([]);
   readonly usuarios = signal<Usuario[]>([]);
@@ -89,6 +100,8 @@ export class CursoDetallePage implements OnInit {
 
   readonly matriculaModalAbierto = signal(false);
   readonly matriculando = signal(false);
+  // El error de matricular se muestra dentro del modal: la alerta de la página queda tapada por él.
+  readonly matriculaError = signal('');
   readonly confirmEliminarMatriculaAbierto = signal(false);
   readonly matriculaAEliminar = signal<Matricula | null>(null);
   readonly eliminandoMatricula = signal(false);
@@ -147,6 +160,14 @@ export class CursoDetallePage implements OnInit {
     if (!curso) {
       return;
     }
+    // El PUT reemplaza todo el curso y el backend exige código, período y fechas al administrador:
+    // un curso anterior a esos datos no se puede publicar hasta completarlos en «Editar curso».
+    const { codigo, periodo, fechaInicio, fechaFin } = curso;
+    if (!codigo || !periodo || !fechaInicio || !fechaFin) {
+      this.error.set('Completa el código, el período y las fechas del curso en «Editar curso» para poder cambiar su estado.');
+      return;
+    }
+
     this.actualizandoEstado.set(true);
     this.error.set('');
     this.cursoService
@@ -155,6 +176,11 @@ export class CursoDetallePage implements OnInit {
         descripcion: curso.descripcion,
         publicado: !curso.publicado,
         programaId: curso.programaId,
+        codigo,
+        periodo,
+        cupoMaximo: curso.cupoMaximo,
+        fechaInicio,
+        fechaFin,
       })
       .subscribe({
         next: (actualizado) => {
@@ -249,6 +275,7 @@ export class CursoDetallePage implements OnInit {
 
   abrirMatricular(): void {
     this.matriculaForm.reset({ estudianteId: '' });
+    this.matriculaError.set('');
     this.matriculaModalAbierto.set(true);
   }
 
@@ -263,7 +290,7 @@ export class CursoDetallePage implements OnInit {
     }
 
     this.matriculando.set(true);
-    this.error.set('');
+    this.matriculaError.set('');
     this.matriculaService
       .matricular({ cursoId: this.cursoId, estudianteId: Number(this.matriculaForm.getRawValue().estudianteId) })
       .subscribe({
@@ -274,7 +301,10 @@ export class CursoDetallePage implements OnInit {
         },
         error: (err: HttpErrorResponse) => {
           this.matriculando.set(false);
-          this.error.set(extraerMensajeError(err));
+          // 409 por cupo lleno u otra regla: se muestra el mensaje del backend tal cual y se
+          // refresca el curso, porque el cupo pudo llenarse mientras el modal estaba abierto.
+          this.matriculaError.set(extraerMensajeError(err));
+          this.cursoService.obtener(this.cursoId).subscribe({ next: (curso) => this.curso.set(curso) });
         },
       });
   }

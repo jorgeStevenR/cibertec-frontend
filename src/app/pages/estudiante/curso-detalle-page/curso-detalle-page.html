@@ -6,6 +6,13 @@
   <div class="page-header">
     <h1>{{ c.titulo }}</h1>
     <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
+    <curso-datos
+      class="datos-curso"
+      [codigo]="c.codigo"
+      [periodo]="c.periodo"
+      [fechaInicio]="c.fechaInicio"
+      [fechaFin]="c.fechaFin"
+    ></curso-datos>
   </div>
 
   <div class="tabs">

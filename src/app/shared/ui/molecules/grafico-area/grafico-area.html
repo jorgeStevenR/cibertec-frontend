@@ -1,0 +1,25 @@
+<svg
+  class="grafico"
+  [attr.viewBox]="'0 0 ' + ancho + ' ' + alto"
+  role="img"
+  [attr.aria-label]="resumen()"
+  preserveAspectRatio="xMidYMid meet"
+>
+  <g class="rejilla">
+    <line *ngFor="let y of rejilla()" [attr.x1]="margen.izq" [attr.x2]="ancho - margen.der" [attr.y1]="y" [attr.y2]="y" />
+  </g>
+
+  <text class="eje" [attr.x]="margen.izq - 8" [attr.y]="yBase + 4" text-anchor="end">0</text>
+  <text class="eje" [attr.x]="margen.izq - 8" [attr.y]="margen.arr + 4" text-anchor="end">{{ techo() }}</text>
+
+  <path class="area" [attr.d]="area()" />
+  <path class="linea" [attr.d]="linea()" />
+
+  <g *ngFor="let p of escalados(); let i = index">
+    <circle class="punto" [attr.cx]="p.x" [attr.cy]="p.y" r="4.5">
+      <title>{{ puntos()[i].etiqueta }}: {{ puntos()[i].valor }}</title>
+    </circle>
+    <text class="valor" [attr.x]="p.x" [attr.y]="p.y - 11" text-anchor="middle">{{ puntos()[i].valor }}</text>
+    <text class="eje" [attr.x]="p.x" [attr.y]="alto - 8" text-anchor="middle">{{ puntos()[i].etiqueta }}</text>
+  </g>
+</svg>

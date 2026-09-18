@@ -1,0 +1,56 @@
+<header class="page-header">
+  <h1>Calificaciones</h1>
+  <p class="subtitle">Las notas de tus actividades y cuestionarios, curso por curso.</p>
+</header>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p *ngIf="cargando()" class="state-msg" role="status">Cargando tus calificaciones…</p>
+
+<div class="estado-vacio" *ngIf="!cargando() && !error() && cursos().length === 0">
+  <p class="estado-titulo">Todavía no tienes calificaciones</p>
+  <p class="estado-desc">Cuando estés matriculado en un curso publicado, sus notas aparecerán aquí.</p>
+</div>
+
+<section class="curso-bloque" *ngFor="let curso of cursos()">
+  <header class="curso-cabecera">
+    <div class="curso-titulo-bloque">
+      <h2>{{ curso.cursoTitulo }}</h2>
+      <p class="curso-fechas" *ngIf="curso.fechaInicio || curso.fechaFin">
+        {{ formatearRangoFechas(curso.fechaInicio, curso.fechaFin) }}
+      </p>
+    </div>
+
+    <div class="puntaje" *ngIf="curso.puntajeMaximoCalificado > 0; else sinCalificar">
+      <span class="puntaje-valor">
+        {{ formatearPuntaje(curso.puntajeObtenido) }} / {{ formatearPuntaje(curso.puntajeMaximoCalificado) }}
+      </span>
+      <span class="puntaje-detalle">{{ porcentaje(curso) }}% de lo calificado</span>
+    </div>
+    <ng-template #sinCalificar>
+      <span class="sin-calificar">Sin calificaciones todavía</span>
+    </ng-template>
+  </header>
+
+  <data-table
+    [columns]="columnas"
+    [rows]="curso.items"
+    emptyMessage="Este curso todavía no tiene actividades ni cuestionarios."
+  >
+    <ng-template dataTableCell="titulo" let-item>
+      <div class="item-titulo">
+        <span class="item-nombre">{{ item.titulo }}</span>
+        <span class="item-tipo">{{ etiquetaTipo(item) }}</span>
+      </div>
+    </ng-template>
+
+    <ng-template dataTableCell="estado" let-item>
+      <span class="estado" [ngClass]="'estado-' + item.estado.toLowerCase()">{{ etiquetaEstado(item) }}</span>
+    </ng-template>
+
+    <ng-template dataTableCell="comentario" let-item>
+      <span class="comentario" *ngIf="item.comentarioDocente; else sinComentario">{{ item.comentarioDocente }}</span>
+      <ng-template #sinComentario>—</ng-template>
+    </ng-template>
+  </data-table>
+</section>

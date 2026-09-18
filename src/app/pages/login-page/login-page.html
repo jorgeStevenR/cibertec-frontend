@@ -32,13 +32,11 @@
 
   <footer class="site-footer">
     <div class="footer-row contact">
-      <span>Villavicencio: 670 3778 · 673 0074 · 321 373 6926</span>
-      <span>San José del Guaviare: 584 9103 · 321 373 6829</span>
-      <span>Acacias: 311 293 0428</span>
+      <span *ngFor="let s of sedes">{{ s.sede }}: {{ s.telefonos }}</span>
     </div>
     <div class="footer-row support">
       ¿Necesitas ayuda con tu usuario o contraseña? Escríbenos a
-      <a href="mailto:recursostecnologicos@ciberctec.edu.co">recursostecnologicos@ciberctec.edu.co</a>
+      <a [href]="'mailto:' + correoSoporte">{{ correoSoporte }}</a>
     </div>
   </footer>
 </div>

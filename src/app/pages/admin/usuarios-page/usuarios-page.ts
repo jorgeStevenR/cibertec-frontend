@@ -32,7 +32,7 @@ export class UsuariosPage implements OnInit {
   // misma pantalla en modo solo-lectura (el backend ya rechaza con 403
   // cualquier escritura de un administrador sobre /api/usuarios).
   readonly puedeGestionar = computed(() => this.auth.usuarioActual()?.rol === 'GESTOR_USUARIOS');
-  readonly detalleBase = computed(() => (this.puedeGestionar() ? '/gestor-usuarios' : '/admin/usuarios'));
+  readonly detalleBase = computed(() => (this.puedeGestionar() ? '/gestor-usuarios/usuarios' : '/admin/usuarios'));
 
   readonly usuarios = signal<Usuario[]>([]);
   readonly cargando = signal(false);

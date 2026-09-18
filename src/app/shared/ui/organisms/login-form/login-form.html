@@ -2,9 +2,10 @@
   <form-field
     label="Correo electrónico"
     inputId="email"
+    nombre="email"
     type="email"
     placeholder="Correo electrónico"
-    autocomplete="email"
+    autocomplete="username"
     [control]="form.controls.email"
     [errorMessage]="mensajeErrorEmail()"
     [hideLabel]="true"
@@ -13,6 +14,7 @@
   <form-field
     label="Contraseña"
     inputId="password"
+    nombre="password"
     [type]="tipoPasswordInput()"
     placeholder="Contraseña"
     autocomplete="current-password"

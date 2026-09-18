@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.datos-curso {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+
+.dato {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+
+  small {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted, #90949c);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+}

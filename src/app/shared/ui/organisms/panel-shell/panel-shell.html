@@ -1,0 +1,69 @@
+<div class="shell" [class.menu-abierto]="menuAbierto()">
+  <aside class="sidebar">
+    <div class="marca">
+      <img src="/logo-ciberctec.png" alt="Ciberctec" />
+
+      <button
+        #botonMenu
+        type="button"
+        class="boton-menu"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="menuAbierto()"
+        [attr.aria-label]="menuAbierto() ? 'Cerrar menú' : 'Abrir menú'"
+        (click)="alternarMenu()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="cuerpo" id="menu-principal">
+      <div class="perfil" *ngIf="usuario as u">
+        <span class="avatar" aria-hidden="true">{{ iniciales(u) }}</span>
+        <div class="perfil-texto">
+          <span class="perfil-nombre">{{ u.nombre }}</span>
+          <span class="perfil-nombre">{{ u.apellido }}</span>
+          <span class="perfil-rol">{{ tituloRol() }}</span>
+        </div>
+      </div>
+
+      <nav aria-label="Principal">
+        <a
+          *ngFor="let item of items()"
+          [routerLink]="item.ruta"
+          routerLinkActive="activo"
+          [routerLinkActiveOptions]="{ exact: item.exacto ?? false }"
+          (click)="cerrarMenu()"
+        >
+          <ng-container [ngSwitch]="item.icono">
+            <svg *ngSwitchCase="'inicio'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+            </svg>
+            <svg *ngSwitchCase="'usuarios'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" />
+              <path d="M3.5 19c.6-3.2 3-5 5.5-5s4.9 1.8 5.5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              <circle cx="17" cy="9" r="2.4" stroke="currentColor" stroke-width="1.7" />
+              <path d="M16.5 14.2c2.3.1 4 1.6 4.5 4.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+            <svg *ngSwitchCase="'programas'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M2 9l10-5 10 5-10 5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <path d="M6 11.5V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+            <svg *ngSwitchCase="'cursos'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v15H6a2 2 0 0 0-2 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <path d="M8 8h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </ng-container>
+          <span>{{ item.etiqueta }}</span>
+        </a>
+      </nav>
+
+      <button type="button" class="salir" (click)="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+    <ng-content></ng-content>
+  </main>
+</div>

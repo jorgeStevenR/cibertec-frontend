@@ -1,0 +1,65 @@
+<page-header titulo="Inicio" subtitulo="Un vistazo a los programas, cursos y usuarios de la plataforma."></page-header>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<p class="estado" role="status" *ngIf="cargando()">Cargando el resumen…</p>
+
+<ng-container *ngIf="datos() as d">
+  <div class="kpis">
+    <kpi-tile etiqueta="Programas" [valor]="d.totalProgramas" apoyo="Programas académicos"></kpi-tile>
+    <kpi-tile
+      etiqueta="Cursos"
+      [valor]="d.totalCursos"
+      [apoyo]="d.cursos.publicados + ' publicados, ' + d.cursos.borradores + ' en borrador'"
+    ></kpi-tile>
+    <kpi-tile
+      etiqueta="Estudiantes"
+      [valor]="d.estudiantes"
+      [apoyo]="d.estudiantesActivos + ' con cuenta activa'"
+    ></kpi-tile>
+    <kpi-tile etiqueta="Profesores" [valor]="d.profesores" apoyo="Cuentas de docentes"></kpi-tile>
+  </div>
+
+  <p class="aviso" *ngIf="d.parcial">
+    Hay más registros de los que caben en una carga: las gráficas se calculan con los primeros 500.
+  </p>
+
+  <div class="paneles">
+    <panel-seccion titulo="Altas de usuarios por mes" class="span-8">
+      <grafico-area [puntos]="d.usuarios.altasPorMes" descripcion="Altas de usuarios por mes"></grafico-area>
+    </panel-seccion>
+
+    <panel-seccion titulo="Usuarios por rol" class="span-4">
+      <grafico-dona [segmentos]="d.segmentosRoles" centroEtiqueta="usuarios" descripcion="Usuarios por rol"></grafico-dona>
+    </panel-seccion>
+
+    <panel-seccion titulo="Cursos por programa" class="span-6">
+      <grafico-barras
+        *ngIf="d.barrasProgramas.length > 0; else sinCursos"
+        [items]="d.barrasProgramas"
+        descripcion="Cursos por programa"
+      ></grafico-barras>
+      <ng-template #sinCursos>
+        <p class="vacio">Todavía no hay cursos creados.</p>
+      </ng-template>
+    </panel-seccion>
+
+    <panel-seccion titulo="Últimos cursos" class="span-6" [sinRelleno]="true">
+      <p class="vacio vacio-relleno" *ngIf="d.cursos.ultimos.length === 0">Todavía no hay cursos creados.</p>
+      <ul class="lista" *ngIf="d.cursos.ultimos.length > 0">
+        <li *ngFor="let curso of d.cursos.ultimos">
+          <a [routerLink]="['/admin', 'cursos', curso.id]">
+            <span class="lista-texto">
+              <span class="lista-titulo">{{ curso.titulo }}</span>
+              <span class="lista-detalle">{{ curso.programaNombre ?? 'Sin programa' }}</span>
+            </span>
+            <span class="lista-lado">
+              <span class="insignia" [class.insignia-activa]="curso.publicado">{{ curso.publicado ? 'Publicado' : 'Borrador' }}</span>
+              <span class="lista-fecha">{{ formatearFecha(curso.fechaCreacion) }}</span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </panel-seccion>
+  </div>
+</ng-container>

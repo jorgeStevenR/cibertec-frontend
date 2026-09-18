@@ -1,0 +1,29 @@
+<div class="dona" *ngIf="total() > 0; else sinDatos">
+  <svg
+    class="grafico"
+    [attr.viewBox]="'0 0 ' + lado + ' ' + lado"
+    role="img"
+    [attr.aria-label]="resumen()"
+  >
+    <path *ngFor="let a of arcos()" [attr.d]="a.ruta" [attr.fill]="a.color">
+      <title>{{ a.etiqueta }}: {{ a.valor }} ({{ a.porcentaje }}%)</title>
+    </path>
+    <text class="total" [attr.x]="centro" [attr.y]="centro + 2" text-anchor="middle">{{ total() }}</text>
+    <text class="centro-etiqueta" *ngIf="centroEtiqueta()" [attr.x]="centro" [attr.y]="centro + 20" text-anchor="middle">
+      {{ centroEtiqueta() }}
+    </text>
+  </svg>
+
+  <ul class="leyenda">
+    <li *ngFor="let a of arcos()">
+      <span class="muestra" [style.background]="a.color"></span>
+      <span class="nombre">{{ a.etiqueta }}</span>
+      <span class="cifra">{{ a.valor }}</span>
+      <span class="porcentaje">{{ a.porcentaje }}%</span>
+    </li>
+  </ul>
+</div>
+
+<ng-template #sinDatos>
+  <p class="sin-datos">Todavía no hay datos para mostrar.</p>
+</ng-template>

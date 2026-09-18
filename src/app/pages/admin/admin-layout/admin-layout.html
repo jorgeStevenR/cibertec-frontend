@@ -1,28 +1,3 @@
-<div class="shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="/logo-ciberctec.png" alt="Ciberctec" />
-    </div>
-
-    <nav>
-      <a routerLink="/admin/usuarios" routerLinkActive="active">Usuarios</a>
-      <a routerLink="/admin/programas" routerLinkActive="active">Programas</a>
-      <a routerLink="/admin/cursos" routerLinkActive="active">Cursos</a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-info">
-        <span class="avatar" *ngIf="usuario as u">{{ iniciales(u) }}</span>
-        <div class="user-texto">
-          <span class="user-name">{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
-          <span class="user-email">{{ usuario?.email }}</span>
-        </div>
-      </div>
-      <button type="button" class="logout-btn" (click)="cerrarSesion()">Cerrar sesión</button>
-    </div>
-  </aside>
-
-  <main class="content">
-    <router-outlet></router-outlet>
-  </main>
-</div>
+<panel-shell [items]="menu" tituloRol="Administrador">
+  <router-outlet></router-outlet>
+</panel-shell>

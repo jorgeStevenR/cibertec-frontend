@@ -10,7 +10,6 @@ import { CursoCard } from '../../../shared/ui/molecules/curso-card/curso-card';
 import { Pagination } from '../../../shared/ui/molecules/pagination/pagination';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
-import { MatriculaService } from '../../../core/services/matricula.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Curso } from '../../../core/models/curso.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
@@ -18,7 +17,6 @@ import { formatearFecha } from '../../../core/utils/labels.util';
 
 interface CursoConDetalle extends Curso {
   totalModulos: number;
-  totalEstudiantes: number;
 }
 
 const TAMANO_PAGINA = 6;
@@ -33,7 +31,6 @@ const TAMANO_PAGINA = 6;
 export class ProfesorCursosPage implements OnInit {
   private readonly cursoService = inject(CursoService);
   private readonly moduloService = inject(ModuloService);
-  private readonly matriculaService = inject(MatriculaService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -85,19 +82,13 @@ export class ProfesorCursosPage implements OnInit {
         }
 
         forkJoin(
-          cursos.map((c) =>
-            forkJoin({
-              modulos: this.moduloService.listarPorCurso(c.id),
-              matriculas: this.matriculaService.listarPorCurso(c.id),
-            }),
-          ),
+          cursos.map((c) => this.moduloService.listarPorCurso(c.id)),
         ).subscribe({
           next: (resultados) => {
             this.cursos.set(
               cursos.map((curso, i) => ({
                 ...curso,
-                totalModulos: resultados[i].modulos.length,
-                totalEstudiantes: resultados[i].matriculas.length,
+                totalModulos: resultados[i].length,
               })),
             );
             this.cargando.set(false);

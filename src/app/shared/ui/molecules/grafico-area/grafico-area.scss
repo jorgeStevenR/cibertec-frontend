@@ -1,0 +1,43 @@
+:host {
+  display: block;
+}
+
+.grafico {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rejilla line {
+  stroke: #e4e7ec;
+  stroke-width: 1;
+}
+
+.eje {
+  font-size: 11.5px;
+  fill: var(--text-muted, #90949c);
+}
+
+.valor {
+  font-size: 11.5px;
+  font-weight: 700;
+  fill: var(--navy, #0c2b6b);
+}
+
+.area {
+  fill: rgba(24, 119, 242, 0.14);
+}
+
+.linea {
+  fill: none;
+  stroke: var(--bright, #1877f2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.punto {
+  fill: #ffffff;
+  stroke: var(--bright, #1877f2);
+  stroke-width: 2.5;
+}

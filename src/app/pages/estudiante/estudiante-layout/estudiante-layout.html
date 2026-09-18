@@ -1,50 +1,59 @@
 <div class="shell">
-  <header class="topbar">
-    <div class="brand">
-      <div class="mark"></div>
-      <span>CIBERCTEC</span>
-    </div>
+  <header class="cabecera">
+    <div class="cabecera-fila cabecera-principal">
+      <span class="cabecera-espacio" aria-hidden="true"></span>
 
-    <div class="topbar-right">
-      <button type="button" class="icon-btn" aria-label="Notificaciones" title="Notificaciones">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 3a6 6 0 0 0-6 6v3.5L4 16h16l-2-3.5V9a6 6 0 0 0-6-6Z"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linejoin="round"
-          />
-          <path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-        </svg>
-      </button>
+      <p class="titulo-sitio">Plataforma educativa</p>
 
       <div class="user-menu">
-        <button type="button" class="user-trigger" (click)="menuAbierto.set(!menuAbierto())">
-          <span class="avatar">{{ iniciales }}</span>
+        <button
+          #disparador
+          type="button"
+          class="user-trigger"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuAbierto()"
+          (click)="menuAbierto.set(!menuAbierto())"
+        >
           <span class="user-text">
-            <span class="user-name">{{ usuario?.nombre }} {{ usuario?.apellido }}</span>
-            <span class="user-rol">Estudiante</span>
+            <span>{{ usuario?.nombre }}</span>
+            <span>{{ usuario?.apellido }}</span>
           </span>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <span class="avatar" aria-hidden="true">{{ iniciales }}</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
 
-        <div class="dropdown-backdrop" *ngIf="menuAbierto()" (click)="menuAbierto.set(false)"></div>
+        <div class="dropdown-backdrop" *ngIf="menuAbierto()" (click)="cerrarMenu()"></div>
 
-        <div class="user-dropdown" *ngIf="menuAbierto()">
-          <div class="dropdown-email">{{ usuario?.email }}</div>
-          <button type="button" (click)="cerrarSesion()">Cerrar sesión</button>
+        <div class="user-dropdown" *ngIf="menuAbierto()" role="menu">
+          <div class="dropdown-identidad">
+            <span class="dropdown-rol">Estudiante</span>
+            <span class="dropdown-email">{{ usuario?.email }}</span>
+          </div>
+
+          <a role="menuitem" routerLink="/estudiante" (click)="cerrarMenu()">Mis cursos</a>
+          <a role="menuitem" routerLink="/estudiante/calificaciones" (click)="cerrarMenu()">Calificaciones</a>
+          <a role="menuitem" routerLink="/estudiante" fragment="calendario" (click)="cerrarMenu()">Calendario</a>
+
+          <div class="dropdown-sep" role="separator"></div>
+
+          <a role="menuitem" [href]="'mailto:' + correoSoporte" (click)="cerrarMenu()">Soporte técnico</a>
+
+          <div class="dropdown-sep" role="separator"></div>
+
+          <button type="button" role="menuitem" (click)="cerrarSesion()">Cerrar sesión</button>
         </div>
       </div>
     </div>
-  </header>
 
-  <nav class="tabs">
-    <a routerLink="/estudiante" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-      Mis cursos
-    </a>
-  </nav>
+    <div class="cabecera-fila">
+      <nav class="nav" aria-label="Principal">
+        <a routerLink="/estudiante" [class.active]="!enCalificaciones">Mis cursos</a>
+        <a routerLink="/estudiante/calificaciones" routerLinkActive="active">Calificaciones</a>
+      </nav>
+    </div>
+  </header>
 
   <main class="content">
     <router-outlet></router-outlet>

@@ -1,17 +1,30 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
 .curso-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  height: 100%;
   background: var(--card, #ffffff);
   border: 1px solid var(--border, #dddfe2);
   border-radius: 14px;
-  padding: 18px 20px;
+  overflow: hidden;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 
   &:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
   }
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
 }
 
 .card-top {
@@ -51,6 +64,12 @@ h3 {
   line-height: 1.3;
 }
 
+.vigencia {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #606770);
+}
+
 .participantes-btn {
   align-self: flex-start;
   padding: 4px 10px;
@@ -67,6 +86,75 @@ h3 {
     background: rgba(24, 119, 242, 0.06);
     border-color: var(--bright, #1877f2);
     color: var(--bright, #1877f2);
+  }
+}
+
+.pendientes {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: rgba(12, 43, 107, 0.08);
+  color: var(--navy, #0c2b6b);
+  font-size: 12px;
+  font-weight: 600;
+
+  &.al-dia {
+    background: rgba(144, 148, 156, 0.14);
+    color: var(--text-secondary, #606770);
+  }
+}
+
+/* Pie de la tarjeta: la barra de progreso queda pegada al borde inferior; el overflow del contenedor la recorta con sus esquinas redondeadas. */
+.card-progreso {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #dddfe2);
+  background: rgba(12, 43, 107, 0.025);
+}
+
+.progreso-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 20px;
+  min-height: 18px;
+}
+
+.progreso-vacio {
+  font-size: 12.5px;
+  color: var(--text-muted, #90949c);
+}
+
+.progreso-valor {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy, #0c2b6b);
+}
+
+.progreso-detalle {
+  font-size: 11.5px;
+  color: var(--text-muted, #90949c);
+}
+
+.progreso-barra {
+  height: 9px;
+  background: rgba(12, 43, 107, 0.12);
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--bright, #1877f2);
+    transition: width 0.4s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progreso-barra span {
+    transition: none;
   }
 }
 
@@ -113,7 +201,7 @@ h3 {
 }
 
 .card-action {
-  margin-top: 2px;
+  margin-top: auto;
   align-self: flex-start;
   padding: 7px 16px;
   border-radius: 8px;

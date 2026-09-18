@@ -14,12 +14,14 @@ export class FormField {
   readonly label = input.required<string>();
   readonly inputId = input.required<string>();
   readonly control = input.required<FormControl>();
-  readonly type = input<'text' | 'email' | 'password' | 'number'>('text');
+  readonly type = input<'text' | 'email' | 'password' | 'number' | 'date'>('text');
   readonly placeholder = input('');
   readonly autocomplete = input('off');
   readonly errorMessage = input('');
   readonly hideLabel = input(false);
+  readonly requerido = input(false);
   readonly conBoton = input(false);
+  readonly nombre = input<string | null>(null);
 
   get invalido(): boolean {
     const c = this.control();

@@ -1,4 +1,18 @@
 .field {
+  .requerido {
+    color: var(--danger, #ff6b64);
+    font-weight: 700;
+  }
+
+  span.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
   label {
     display: block;
     font-size: 12px;

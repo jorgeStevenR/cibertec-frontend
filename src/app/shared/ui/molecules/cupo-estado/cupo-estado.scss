@@ -1,0 +1,38 @@
+.cupo {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13.5px;
+  color: var(--text-primary, #1c1e21);
+}
+
+.cupo-texto {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cupo-etiqueta {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.casi-lleno .cupo-etiqueta {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92600a;
+}
+
+.lleno {
+  .cupo-texto {
+    color: #b3261e;
+  }
+
+  .cupo-etiqueta {
+    background: rgba(179, 38, 30, 0.12);
+    color: #b3261e;
+  }
+}

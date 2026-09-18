@@ -1,0 +1,227 @@
+:host {
+  --bg: #f5f6f8;
+
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--navy, #0c2b6b);
+  box-shadow: 2px 0 16px rgba(12, 43, 107, 0.12);
+  z-index: 2;
+}
+
+// Bloque blanco con el logo: el logo real es oscuro y no se lee sobre azul marino.
+.marca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 84px;
+  padding: 0 24px;
+  background: var(--card, #ffffff);
+  box-shadow: 0 1px 0 var(--border, #dddfe2);
+
+  img {
+    height: 40px;
+    width: auto;
+    display: block;
+  }
+}
+
+.boton-menu {
+  display: none;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border, #dddfe2);
+  border-radius: 10px;
+  background: none;
+  color: var(--navy, #0c2b6b);
+  cursor: pointer;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--bright, #1877f2);
+    outline-offset: 2px;
+  }
+}
+
+.cuerpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #dde1ec;
+  color: var(--navy, #0c2b6b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.perfil-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.perfil-nombre {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perfil-rol {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 0;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px 12px 21px;
+    border-left: 3px solid transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 14.5px;
+    font-weight: 500;
+    text-decoration: none;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #ffffff;
+    }
+
+    &.activo {
+      background: rgba(255, 255, 255, 0.13);
+      border-left-color: #5aa3f5;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #ffffff;
+      outline-offset: -2px;
+    }
+  }
+}
+
+.salir {
+  margin: auto 24px 0;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: none;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+}
+
+.contenido {
+  min-width: 0;
+  padding: 32px 40px 48px;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .marca {
+    min-height: 68px;
+    padding: 0 16px;
+
+    img {
+      height: 34px;
+    }
+  }
+
+  .boton-menu {
+    display: inline-flex;
+  }
+
+  .cuerpo {
+    display: none;
+    padding-bottom: 16px;
+  }
+
+  .shell.menu-abierto .cuerpo {
+    display: flex;
+  }
+
+  .salir {
+    margin-top: 12px;
+  }
+
+  .contenido {
+    padding: 24px 16px 40px;
+  }
+}

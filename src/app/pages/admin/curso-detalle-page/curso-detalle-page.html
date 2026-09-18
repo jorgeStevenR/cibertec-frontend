@@ -8,15 +8,33 @@
       <h1>{{ c.titulo }}</h1>
       <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
       <p class="meta">Profesor: {{ nombreProfesor(c.profesorId) }} · Programa: {{ c.programaNombre ?? 'Sin programa asignado' }}</p>
+      <curso-datos
+        class="datos-curso"
+        [codigo]="c.codigo"
+        [periodo]="c.periodo"
+        [fechaInicio]="c.fechaInicio"
+        [fechaFin]="c.fechaFin"
+        [matriculados]="c.matriculados"
+        [cupoMaximo]="c.cupoMaximo"
+      ></curso-datos>
+      <p class="aviso-datos" *ngIf="faltanDatosAcademicos()">
+        Faltan el código, el período o las fechas de este curso.
+        <a [routerLink]="['/admin', 'cursos', c.id, 'editar']">Completar datos</a>
+      </p>
     </div>
-    <ui-button
-      variant="secondary"
-      [fullWidth]="false"
-      [loading]="actualizandoEstado()"
-      (pressed)="togglePublicado()"
-    >
-      {{ c.publicado ? 'Despublicar' : 'Publicar' }}
-    </ui-button>
+    <div class="header-acciones">
+      <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', c.id, 'editar']">
+        Editar curso
+      </ui-button>
+      <ui-button
+        variant="secondary"
+        [fullWidth]="false"
+        [loading]="actualizandoEstado()"
+        (pressed)="togglePublicado()"
+      >
+        {{ c.publicado ? 'Despublicar' : 'Publicar' }}
+      </ui-button>
+    </div>
   </div>
 </ng-container>
 
@@ -62,7 +80,12 @@
 <div *ngIf="tabActiva() === 'matriculas'">
   <div class="section-header">
     <h2>Estudiantes matriculados</h2>
-    <ui-button [fullWidth]="false" (pressed)="abrirMatricular()">Matricular estudiante</ui-button>
+    <div class="matricular-accion">
+      <span class="cupo-lleno-aviso" *ngIf="cursoLleno()">El curso alcanzó su cupo máximo.</span>
+      <ui-button [fullWidth]="false" [disabled]="cursoLleno()" (pressed)="abrirMatricular()">
+        Matricular estudiante
+      </ui-button>
+    </div>
   </div>
 
   <data-table
@@ -109,6 +132,8 @@
 
 <ui-modal [open]="matriculaModalAbierto()" title="Matricular estudiante" (closed)="cerrarModalMatricula()">
   <form [formGroup]="matriculaForm" (ngSubmit)="matricular()" novalidate class="modal-form">
+    <ui-alert [message]="matriculaError()"></ui-alert>
+
     <select-field
       label="Estudiante"
       inputId="estudianteId"

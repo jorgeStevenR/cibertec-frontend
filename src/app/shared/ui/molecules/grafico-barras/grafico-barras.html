@@ -1,0 +1,19 @@
+<ul class="barras" [attr.aria-label]="descripcion()">
+  <li *ngFor="let b of barras()">
+    <span class="etiqueta" [attr.title]="b.etiqueta">{{ b.etiqueta }}</span>
+    <span
+      class="pista"
+      role="img"
+      [attr.aria-label]="b.etiqueta + ': ' + b.valor + (nombreExtra() ? ' ' + nombreValor() + ' y ' + b.extra + ' ' + nombreExtra() : '')"
+    >
+      <span class="relleno" [style.width.%]="b.porcentajeValor"></span>
+      <span class="relleno-extra" *ngIf="b.extra > 0" [style.width.%]="b.porcentajeExtra"></span>
+    </span>
+    <span class="cifra">{{ b.valor + b.extra }}</span>
+  </li>
+</ul>
+
+<div class="leyenda" *ngIf="nombreExtra()">
+  <span><span class="muestra muestra-valor"></span>{{ nombreValor() }}</span>
+  <span><span class="muestra muestra-extra"></span>{{ nombreExtra() }}</span>
+</div>

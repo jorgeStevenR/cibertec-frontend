@@ -1,0 +1,139 @@
+.page-header {
+  margin-bottom: 24px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--navy, #0c2b6b);
+  }
+
+  .subtitle {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-secondary, #606770);
+  }
+}
+
+.state-msg {
+  color: var(--text-muted, #90949c);
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.estado-vacio {
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--card, #ffffff);
+  border: 1px dashed var(--border, #dddfe2);
+  border-radius: 14px;
+
+  .estado-titulo {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary, #1c1e21);
+  }
+
+  .estado-desc {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary, #606770);
+  }
+}
+
+.curso-bloque {
+  margin-bottom: 28px;
+}
+
+.curso-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary, #1c1e21);
+  }
+}
+
+.puntaje {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.puntaje-valor {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--navy, #0c2b6b);
+}
+
+.puntaje-detalle {
+  font-size: 12.5px;
+  color: var(--text-muted, #90949c);
+}
+
+.sin-calificar {
+  font-size: 13.5px;
+  color: var(--text-muted, #90949c);
+}
+
+.item-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-nombre {
+  font-weight: 600;
+  color: var(--text-primary, #1c1e21);
+}
+
+.item-tipo {
+  font-size: 12px;
+  color: var(--text-muted, #90949c);
+}
+
+.estado {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(144, 148, 156, 0.15);
+  color: var(--text-secondary, #606770);
+
+  &.estado-entregada {
+    background: rgba(24, 119, 242, 0.12);
+    color: var(--bright, #1877f2);
+  }
+
+  &.estado-calificada,
+  &.estado-rendido {
+    background: rgba(12, 43, 107, 0.1);
+    color: var(--navy, #0c2b6b);
+  }
+}
+
+.comentario {
+  display: block;
+  max-width: 320px;
+  font-size: 13px;
+  color: var(--text-secondary, #606770);
+  white-space: normal;
+}
+
+.curso-fechas {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #90949c);
+}

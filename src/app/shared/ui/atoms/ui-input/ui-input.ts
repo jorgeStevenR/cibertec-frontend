@@ -16,11 +16,14 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 })
 export class UiInput implements ControlValueAccessor {
   readonly inputId = input('');
-  readonly type = input<'text' | 'email' | 'password' | 'number'>('text');
+  readonly type = input<'text' | 'email' | 'password' | 'number' | 'date'>('text');
   readonly placeholder = input('');
   readonly autocomplete = input('off');
   readonly invalid = input(false);
   readonly conBoton = input(false);
+  // Solo hace falta en formularios que el navegador debe reconocer (ej. login para
+  // recordar la cuenta); en el resto no se pone para no disparar autocompletados.
+  readonly nombre = input<string | null>(null);
 
   protected value = '';
   protected disabled = false;

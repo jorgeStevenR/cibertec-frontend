@@ -7,6 +7,7 @@ import { PhotoCarousel } from '../../shared/ui/molecules/photo-carousel/photo-ca
 import { AuthService } from '../../core/services/auth.service';
 import { LoginRequest } from '../../core/models/usuario.model';
 import { extraerMensajeError } from '../../core/utils/http-error.util';
+import { CORREO_SOPORTE, SEDES_CONTACTO } from '../../core/config/contacto.config';
 
 // TODO: reemplazar por fotos reales de Cibertec (campus, aulas, estudiantes) cuando estén disponibles.
 const IMAGENES_CAROUSEL: string[] = [
@@ -25,6 +26,8 @@ const IMAGENES_CAROUSEL: string[] = [
 })
 export class LoginPage {
   readonly imagenesCarousel = IMAGENES_CAROUSEL;
+  readonly sedes = SEDES_CONTACTO;
+  readonly correoSoporte = CORREO_SOPORTE;
 
   readonly loading = signal(false);
   readonly success = signal(false);

@@ -1,39 +1,60 @@
-<welcome-banner
-  [nombre]="usuario?.nombre ?? ''"
-  subtitulo="Estos son los cursos en los que estás matriculado."
-></welcome-banner>
+<div class="dashboard">
+  <div class="dashboard-main">
+    <welcome-banner
+      [nombre]="usuario?.nombre ?? ''"
+      subtitulo="Estos son los cursos en los que estás matriculado."
+    ></welcome-banner>
 
-<banner-carousel></banner-carousel>
+    <banner-carousel></banner-carousel>
 
-<ui-alert [message]="error()"></ui-alert>
+    <ui-alert [message]="error()"></ui-alert>
 
-<p *ngIf="cargando()" class="state-msg">Cargando…</p>
+    <p *ngIf="resumenError()" class="aviso-error">No se pudo cargar el avance de tus cursos.</p>
 
-<p *ngIf="!cargando() && cursos().length === 0" class="state-msg">
-  Todavía no estás matriculado en ningún curso.
-</p>
+    <p *ngIf="cargando()" class="state-msg">Cargando…</p>
 
-<div class="cursos-grid" *ngIf="!cargando() && cursos().length > 0">
-  <curso-card
-    *ngFor="let curso of cursosPagina()"
-    [codigo]="'CURSO-' + curso.id"
-    [titulo]="curso.titulo"
-    [publicado]="curso.publicado"
-    [docenteNombre]="curso.profesorNombre"
-    [docenteEmail]="curso.profesorEmail"
-    [meta]="[
-      curso.totalModulos + ' ' + (curso.totalModulos === 1 ? 'módulo' : 'módulos'),
-      'Matriculado el ' + formatearFecha(curso.fechaMatricula)
-    ]"
-    [routerLinkTarget]="['/estudiante', 'cursos', curso.id]"
-    (participantesClick)="abrirParticipantes(curso)"
-  ></curso-card>
+    <p *ngIf="!cargando() && cursos().length === 0" class="state-msg">
+      Todavía no estás matriculado en ningún curso.
+    </p>
+
+    <div class="cursos-grid" *ngIf="!cargando() && cursos().length > 0">
+      <curso-card
+        *ngFor="let curso of cursosPagina()"
+        [codigo]="curso.codigo ?? ''"
+        [titulo]="curso.titulo"
+        [publicado]="curso.publicado"
+        [periodo]="curso.periodo"
+        [fechaInicio]="curso.fechaInicio"
+        [fechaFin]="curso.fechaFin"
+        [docenteNombre]="curso.profesorNombre"
+        [docenteEmail]="curso.profesorEmail"
+        [pendientes]="resumenPorCurso()[curso.id]?.actividadesPendientes ?? null"
+        [progreso]="resumenPorCurso()[curso.id]?.porcentajeCompletado ?? null"
+        [progresoDetalle]="detalleAvance(curso.id)"
+        [reservarProgreso]="true"
+        [meta]="[
+          curso.totalModulos + ' ' + (curso.totalModulos === 1 ? 'módulo' : 'módulos'),
+          'Matriculado el ' + formatearFecha(curso.fechaMatricula)
+        ]"
+        [routerLinkTarget]="['/estudiante', 'cursos', curso.id]"
+        (participantesClick)="abrirParticipantes(curso)"
+      ></curso-card>
+    </div>
+
+    <ui-pagination
+      *ngIf="!cargando() && cursos().length > 0"
+      [pagina]="pagina()"
+      [totalPaginas]="totalPaginas()"
+      [totalElementos]="cursos().length"
+      (cambiarPagina)="cambiarPagina($event)"
+    ></ui-pagination>
+  </div>
+
+  <aside class="dashboard-lateral" id="calendario">
+    <mini-calendario
+      [eventos]="eventos()"
+      [error]="vencimientosError()"
+      (mesCambiado)="cambiarMes($event)"
+    ></mini-calendario>
+  </aside>
 </div>
-
-<ui-pagination
-  *ngIf="!cargando() && cursos().length > 0"
-  [pagina]="pagina()"
-  [totalPaginas]="totalPaginas()"
-  [totalElementos]="cursos().length"
-  (cambiarPagina)="cambiarPagina($event)"
-></ui-pagination>

@@ -1,0 +1,4 @@
+<span class="cupo" [class.lleno]="estado() === 'lleno'" [class.casi-lleno]="estado() === 'casi-lleno'">
+  <span class="cupo-texto" [attr.title]="cupoMaximo() !== null ? 'Matriculados / cupo máximo' : null">{{ texto() }}</span>
+  <span class="cupo-etiqueta" *ngIf="etiquetaEstado()">{{ etiquetaEstado() }}</span>
+</span>

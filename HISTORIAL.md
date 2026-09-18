@@ -27,6 +27,81 @@ este repo).
   `curso.service.ts` tenía un bug de `if/else if` que impedía mandar ambos
   filtros a la vez). **Usuarios es solo lectura para el admin** (ver punto
   siguiente).
+- **Rediseño de los paneles Administrador y Gestor de usuarios (Fase A hecha)**,
+  a partir de una referencia de dashboard que pasó el usuario (sidebar oscuro con
+  perfil y menú, paneles con gráficos). Se adaptó con la paleta de Cibertec (azul
+  marino + azul, no el rosa de la referencia). Un shell compartido
+  (`shared/ui/organisms/panel-shell`) reemplaza los layouts: sidebar `--navy` con
+  bloque blanco para el logo (el logo real no se lee sobre azul), perfil, menú
+  con íconos y "Cerrar sesión"; en ≤ 900 px pasa a barra superior con menú
+  desplegable. Nuevas pantallas de **Inicio** para cada rol (`/admin/inicio`,
+  `/gestor-usuarios/inicio`) con KPIs y gráficos SVG propios (área, dona, barras;
+  sin librerías) alimentados por los listados existentes (`tamano=500`, cálculo en
+  el navegador con `core/utils/resumen.util.ts` y `graficos.util.ts`, con tests).
+  Rutas del gestor reorganizadas: `inicio`, `usuarios`, `usuarios/nuevo`,
+  `usuarios/:usuarioId`. Componentes nuevos: `panel-seccion`, `kpi-tile`,
+  `page-header`, `grafico-*`. **Falta la Fase B**: aplicar `page-header`/
+  `panel-seccion` y restyle de `data-table` y `ui-modal` en las listas, detalles y
+  formularios de usuarios, programas y cursos (y `campo-busqueda`, aún no creado).
+  Programas siguen editándose en modal. Si crece la base, conviene un
+  endpoint de resumen en el backend en vez de calcular en el navegador.
+- **Cursos del administrador: crear/editar en página, no en modal.** A partir de
+  la pantalla "Crear curso" de un sistema académico que pasó el usuario (formulario
+  en cuadrícula con `*` de obligatorio, Cancelar/Aceptar abajo), nueva
+  `pages/admin/curso-form-page` para `/admin/cursos/nuevo` y
+  `/admin/cursos/:cursoId/editar` (tres columnas, panel lateral "Después de crear
+  el curso"; al guardar abre el curso para seguir con módulos y matrículas). En
+  edición el profesor queda bloqueado (el backend no permite cambiarlo) y aparece
+  el selector de estado Borrador/Publicado. `cursos-page` ya no tiene modal: usa
+  `page-header`, el título es un enlace al curso con el programa debajo, y el
+  detalle del curso suma el botón "Editar curso". `form-field`, `select-field` y
+  `textarea-field` ganan el input `requerido` (asterisco + texto para lectores de
+  pantalla).
+- **Datos académicos del curso conectados** (backend ya los expone): `codigo`,
+  `periodo` ("AAAA-N"), `cupoMaximo` (null = sin límite), `fechaInicio`,
+  `fechaFin` ("yyyy-MM-dd") y `matriculados` (solo lectura). Los cursos viejos
+  (ids 1-3 y 11-16) los traen en null y la UI los tolera ("—"). Formulario
+  crear/editar con los 5 campos y validación local (período con formato, fin >=
+  inicio, cupo entero >= 1 o vacío = null). Los errores del backend se muestran junto
+  a su campo: el 400 con `errores` por nombre de campo, y los 409/400 que llegan solo
+  como `message` se asocian por texto (`campoDeMensajeCurso`, con tests). En edición
+  del PUT el admin debe enviar código/período/fechas: "Publicar/Despublicar" del
+  detalle reenvía los campos actuales y, si el curso es antiguo y le faltan, avisa
+  que hay que completarlos en «Editar curso» en vez de llamar al backend. Cupo:
+  componente `cupo-estado` ("3 / 4", "3 matriculados · sin límite", casi lleno =
+  queda 1 lugar, lleno); el botón de matricular se deshabilita con el curso lleno y
+  el 409 del backend se muestra dentro del modal (y refresca el curso).
+  `curso-datos` (solo lectura) se usa en el detalle de admin, profesor (con cupo) y
+  estudiante (sin cupo); `curso-card` muestra código real, período, fechas y cupo
+  (profesor). La lista de cursos del admin suma período, fechas y cupo. Las fechas de
+  calendario NUNCA pasan por `new Date`: `formatearFechaCalendario` parte el texto
+  (en Colombia `new Date('2026-08-03')` daría el 2 de agosto). Modelos del estudiante
+  (`ResumenCurso`, `CalificacionesCurso`) con `fechaInicio/fechaFin`; se muestran en
+  Calificaciones. Ojo: el panel del profesor no tiene pantalla para editar el curso
+  (solo módulos), así que el caso "profesor edita título/descripción" y su 403 no se
+  puede dar desde la UI; ve los 5 datos como solo lectura. Pendiente si se quiere:
+  `ui-modal` de matrícula y demás pantallas aún con estilo viejo (Fase B).
+- **Panel del estudiante con estructura tipo Moodle** (referencia que pasó el
+  usuario): header en dos filas (logo, título "Plataforma educativa" y menú de
+  usuario; debajo, pestañas), "Mis cursos" con banner, carrusel y tarjetas
+  clásicas en 2 columnas × 3 filas, chip de "N actividades pendientes" por
+  curso, calendario lateral (`mini-calendario`) con puntos en los días que
+  vencen actividades sin entregar y cuestionarios, y footer de Cibertec (logo,
+  sedes y correo de soporte; datos en `core/config/contacto.config.ts`,
+  compartidos con el login). Los datos vienen de 3 endpoints del backend
+  (`core/services/estudiante-avance.service.ts`, `/api/estudiantes/{id}/...`):
+  `cursos/resumen` (barra de % completado y chip de pendientes por tarjeta; el
+  porcentaje lo calcula el backend, no se recalcula), `vencimientos?desde&hasta`
+  (calendario: se pide 1 vez por mes visible con `switchMap` para descartar
+  respuestas de un mes anterior; distingue PENDIENTE/VENCIDA/hechas) y
+  `calificaciones` (vista nueva `/estudiante/calificaciones`, pestaña
+  "Calificaciones" en el header: una sección por curso con puntaje y tabla de
+  ítems; un curso 0/0 se muestra como "Sin calificaciones todavía", no 0%). Se
+  quitaron los cálculos manuales que hacían decenas de llamadas. Resumen y
+  vencimientos son carga no crítica con flags de error propios. Se probó antes
+  un diseño con portadas generadas por curso y el usuario prefirió el anterior.
+  **Sin verificar contra datos reales**: el servidor local corría código viejo
+  (ver "En progreso"). Falta revisar el detalle del curso.
 - **Rol nuevo: GESTOR_USUARIOS** — separa la gestión de cuentas del rol
   ADMINISTRADOR (backend actualizado para reflejar esto). El admin conserva
   todo lo académico (programas, cursos, matrículas, contenido) pero perdió
@@ -87,7 +162,16 @@ este repo).
 
 ## En progreso
 
-Nada a medio terminar en este momento — punto de corte limpio. El rol
+**Verificar los 3 endpoints del estudiante contra el backend reiniciado.** El
+2026-09-18 el proceso del puerto 8080 arrancó antes de compilar el controlador
+nuevo (`EstudianteAvanceController`), por lo que `/api/estudiantes/...` daba 500
+"Ocurrió un error inesperado" (igual que cualquier ruta inexistente: el backend
+convierte "sin handler" en 500 en vez de 404). Reiniciar con `mvnw.cmd
+spring-boot:run` y comprobar con las cuentas de prueba (camila.rojas 44% y
+35/40, andres.pardo 22% y 19/30, valentina.cruz 0% y 0/0, contraseña
+`Sim12345!`, curso 18; el curso borrador 19 no debe aparecer).
+
+Aparte de eso, nada a medio terminar — punto de corte limpio. El rol
 GESTOR_USUARIOS (guard, panel nuevo, `UsuariosPage`/`UsuarioDetallePage`
 compartidos con modo lectura/edición según rol) está implementado y
 compila/testea en verde, pero **todavía no fue probado en el navegador**

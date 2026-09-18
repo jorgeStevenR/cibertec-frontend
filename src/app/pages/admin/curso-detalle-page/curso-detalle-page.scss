@@ -108,3 +108,37 @@ h1 {
     background: rgba(0, 0, 0, 0.03);
   }
 }
+
+.header-acciones {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.datos-curso {
+  margin-top: 10px;
+}
+
+.aviso-datos {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #7a4f08;
+
+  a {
+    font-weight: 700;
+    color: var(--bright, #1877f2);
+  }
+}
+
+.matricular-accion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cupo-lleno-aviso {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b3261e;
+}
