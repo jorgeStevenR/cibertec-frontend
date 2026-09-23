@@ -27,6 +27,63 @@
   padding: 18px 20px;
 }
 
+.card-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #dddfe2);
+  background: rgba(12, 43, 107, 0.04);
+  color: var(--navy, #0c2b6b);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(24, 119, 242, 0.1);
+    border-color: var(--bright, #1877f2);
+  }
+}
+
+.action-btn-primary {
+  background: var(--bright, #1877f2);
+  border-color: var(--bright, #1877f2);
+  color: #ffffff;
+
+  &:hover {
+    opacity: 0.92;
+    background: var(--bright, #1877f2);
+  }
+}
+
 .card-top {
   display: flex;
   align-items: center;
@@ -68,25 +125,6 @@ h3 {
   margin: 0;
   font-size: 12.5px;
   color: var(--text-secondary, #606770);
-}
-
-.participantes-btn {
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: 7px;
-  border: 1px solid var(--border, #dddfe2);
-  background: none;
-  color: var(--text-secondary, #606770);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-
-  &:hover {
-    background: rgba(24, 119, 242, 0.06);
-    border-color: var(--bright, #1877f2);
-    color: var(--bright, #1877f2);
-  }
 }
 
 .pendientes {
@@ -158,6 +196,21 @@ h3 {
   }
 }
 
+@media (max-width: 420px) {
+  .card-main {
+    flex-direction: column;
+  }
+
+  .card-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .action-btn {
+    flex: 1;
+  }
+}
+
 .meta-list {
   list-style: none;
   margin: 0;
@@ -200,18 +253,3 @@ h3 {
   }
 }
 
-.card-action {
-  margin-top: auto;
-  align-self: flex-start;
-  padding: 7px 16px;
-  border-radius: 8px;
-  background: var(--bright, #1877f2);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-
-  &:hover {
-    opacity: 0.92;
-  }
-}

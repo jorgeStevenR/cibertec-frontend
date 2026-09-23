@@ -5,6 +5,8 @@ export interface Matricula {
   estudianteNombre: string | null;
   estudianteEmail: string | null;
   fechaMatricula: string;
+  fechaUltimoAcceso: string | null;
+  estudianteUltimoLogin: string | null;
 }
 
 export interface MatriculaCrearRequest {

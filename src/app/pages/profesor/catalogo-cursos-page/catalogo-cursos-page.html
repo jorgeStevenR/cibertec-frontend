@@ -1,0 +1,61 @@
+<h1>Cursos</h1>
+
+<div class="card">
+  <h2>Vista general de curso</h2>
+
+  <ui-alert [message]="error()"></ui-alert>
+
+  <div class="filtros">
+    <select-field
+      label="Filtrar por estado"
+      inputId="filtro-estado"
+      [control]="filtroEstado"
+      [options]="opcionesEstado"
+      [hideLabel]="true"
+    ></select-field>
+
+    <div class="buscador">
+      <label for="buscador-cursos" class="sr-only">Buscar curso</label>
+      <input
+        id="buscador-cursos"
+        type="search"
+        placeholder="Buscar"
+        [value]="busqueda()"
+        (input)="onBusquedaInput($any($event.target).value)"
+      />
+    </div>
+
+    <select-field
+      label="Ordenar por"
+      inputId="filtro-orden"
+      [control]="orden"
+      [options]="opcionesOrden"
+      [hideLabel]="true"
+    ></select-field>
+  </div>
+
+  <p *ngIf="cargando()" class="state-msg">Cargando…</p>
+
+  <p *ngIf="!cargando() && cursosFiltrados().length === 0" class="state-msg">
+    No hay cursos que coincidan con la búsqueda.
+  </p>
+
+  <div class="cursos-grid" *ngIf="!cargando() && cursosFiltrados().length > 0">
+    <curso-tile
+      *ngFor="let curso of cursosPagina()"
+      [titulo]="curso.titulo"
+      [subtitulo]="curso.codigo ?? ''"
+      [meta]="curso.matriculados + (curso.matriculados === 1 ? ' matriculado' : ' matriculados')"
+      [routerLinkTarget]="['/profesor', 'cursos', curso.id]"
+      (participantesClick)="abrirParticipantes(curso)"
+    ></curso-tile>
+  </div>
+
+  <ui-pagination
+    *ngIf="!cargando() && cursosFiltrados().length > 0"
+    [pagina]="pagina()"
+    [totalPaginas]="totalPaginas()"
+    [totalElementos]="cursosFiltrados().length"
+    (cambiarPagina)="cambiarPagina($event)"
+  ></ui-pagination>
+</div>

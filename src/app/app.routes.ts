@@ -119,11 +119,24 @@ export const routes: Routes = [
           import('./pages/profesor/cursos-page/cursos-page').then((m) => m.ProfesorCursosPage),
       },
       {
+        path: 'cursos',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./pages/profesor/catalogo-cursos-page/catalogo-cursos-page').then(
+            (m) => m.ProfesorCatalogoCursosPage,
+          ),
+      },
+      {
         path: 'cursos/:cursoId',
         loadComponent: () =>
           import('./pages/profesor/curso-detalle-page/curso-detalle-page').then(
             (m) => m.ProfesorCursoDetallePage,
           ),
+      },
+      {
+        path: 'perfil',
+        loadComponent: () =>
+          import('./pages/profesor/perfil-page/perfil-page').then((m) => m.ProfesorPerfilPage),
       },
     ],
   },

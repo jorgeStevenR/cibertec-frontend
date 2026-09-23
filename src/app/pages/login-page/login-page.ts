@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LoginRequest } from '../../core/models/usuario.model';
 import { extraerMensajeError } from '../../core/utils/http-error.util';
 import { CORREO_SOPORTE, SEDES_CONTACTO } from '../../core/config/contacto.config';
+import { LoaderService } from '../../shared/loader/loader.service';
 
 // TODO: reemplazar por fotos reales de Cibertec (campus, aulas, estudiantes) cuando estén disponibles.
 const IMAGENES_CAROUSEL: string[] = [
@@ -35,10 +36,12 @@ export class LoginPage {
 
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly loader = inject(LoaderService);
 
   onSubmit(credenciales: LoginRequest): void {
     this.serverError.set('');
     this.loading.set(true);
+    this.loader.show();
 
     this.auth.login(credenciales).subscribe({
       next: (respuesta) => {
@@ -52,10 +55,14 @@ export class LoginPage {
           ESTUDIANTE: '/estudiante',
         };
         const destino = destinos[respuesta.usuario.rol] ?? '/login';
-        setTimeout(() => this.router.navigateByUrl(destino), 500);
+        setTimeout(() => {
+          this.loader.hide();
+          this.router.navigateByUrl(destino);
+        }, 500);
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
+        this.loader.hide();
         this.serverError.set(extraerMensajeError(error, 'No se pudo iniciar sesión. Intenta de nuevo.'));
       },
     });

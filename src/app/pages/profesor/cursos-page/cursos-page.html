@@ -7,7 +7,9 @@
 
 <ui-alert [message]="error()"></ui-alert>
 
-<p *ngIf="cargando()" class="state-msg">Cargando…</p>
+<div class="cursos-grid" *ngIf="cargando()">
+  <curso-card-skeleton *ngFor="let _ of esqueletos"></curso-card-skeleton>
+</div>
 
 <p *ngIf="!cargando() && cursos().length === 0" class="state-msg">
   Todavía no tienes cursos asignados.

@@ -19,6 +19,7 @@ import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
 import { CuestionarioService } from '../../../core/services/cuestionario.service';
+import { LienzoService } from '../../../core/services/lienzo.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
@@ -27,6 +28,7 @@ import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
 import { Bloque } from '../../../core/models/bloque.model';
 import { Cuestionario } from '../../../core/models/cuestionario.model';
+import { LienzoResumen } from '../../../core/models/lienzo.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -37,6 +39,7 @@ interface ModuloConContenidos {
   bloques: Bloque[];
   cuestionarios: Cuestionario[];
   cuestionariosError: boolean;
+  paginas: LienzoResumen[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -68,6 +71,7 @@ export class EstudianteCursoDetallePage implements OnInit {
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
   private readonly cuestionarioService = inject(CuestionarioService);
+  private readonly lienzoService = inject(LienzoService);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -84,6 +88,27 @@ export class EstudianteCursoDetallePage implements OnInit {
   readonly cargandoParticipantes = signal(false);
   private participantesCargados = false;
 
+  readonly navAbierta = signal(true);
+  readonly modulosColapsados = signal<Set<number>>(new Set());
+
+  toggleNav(): void {
+    this.navAbierta.update((valor) => !valor);
+  }
+
+  toggleModuloNav(moduloId: number): void {
+    const colapsados = new Set(this.modulosColapsados());
+    if (colapsados.has(moduloId)) {
+      colapsados.delete(moduloId);
+    } else {
+      colapsados.add(moduloId);
+    }
+    this.modulosColapsados.set(colapsados);
+  }
+
+  moduloColapsado(moduloId: number): boolean {
+    return this.modulosColapsados().has(moduloId);
+  }
+
   readonly participantesColumnas: DataTableColumn<Matricula>[] = [
     { key: 'nombre', label: 'Nombre', format: (m) => m.estudianteNombre || `Estudiante #${m.estudianteId}` },
     { key: 'email', label: 'Correo', format: (m) => m.estudianteEmail ?? '—' },
@@ -98,10 +123,14 @@ export class EstudianteCursoDetallePage implements OnInit {
   readonly personajeImagenUrls = signal<Record<number, string>>({});
   readonly personajeFraseIndice = signal<Record<number, number>>({});
 
-  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string } | null>(null);
+  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string; paginaInicialId: number | null } | null>(null);
 
   abrirLienzo(moduloId: number, titulo: string): void {
-    this.lienzoAbierto.set({ moduloId, titulo });
+    this.lienzoAbierto.set({ moduloId, titulo, paginaInicialId: null });
+  }
+
+  abrirPagina(moduloId: number, paginaId: number, tituloModulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: paginaId });
   }
 
   cerrarLienzo(): void {
@@ -123,6 +152,15 @@ export class EstudianteCursoDetallePage implements OnInit {
     if (this.route.snapshot.queryParamMap.get('tab') === 'participantes') {
       this.seleccionarTab('participantes');
     }
+    this.registrarAcceso();
+  }
+
+  // Telemetría: no debe bloquear la navegación ni mostrar error al estudiante si falla.
+  private registrarAcceso(): void {
+    this.matriculaService.registrarAcceso(this.cursoId).subscribe({
+      next: () => {},
+      error: (err: HttpErrorResponse) => console.error('No se pudo registrar el acceso al curso', err),
+    });
   }
 
   seleccionarTab(tab: Tab): void {
@@ -183,6 +221,8 @@ export class EstudianteCursoDetallePage implements OnInit {
                   return of({ items: [] as Cuestionario[], fallo: true });
                 }),
               ),
+              // No crítico: si falla, el módulo se ve igual sin las páginas del lienzo en la navegación.
+              paginas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
             }),
           ),
         ).subscribe({
@@ -196,6 +236,7 @@ export class EstudianteCursoDetallePage implements OnInit {
               bloques: resultados[i].bloques,
               cuestionarios: resultados[i].cuestionarios.items,
               cuestionariosError: resultados[i].cuestionarios.fallo,
+              paginas: resultados[i].paginas,
             }));
             this.modulos.set(modulosConDatos);
             this.cargarMisEntregas(modulosConDatos);

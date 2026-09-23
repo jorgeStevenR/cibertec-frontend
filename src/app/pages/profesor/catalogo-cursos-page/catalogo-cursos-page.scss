@@ -1,0 +1,101 @@
+h1 {
+  margin: 0 0 20px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary, #1c1e21);
+}
+
+.card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #dddfe2);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+h2 {
+  margin: 0 0 16px;
+  padding-bottom: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary, #1c1e21);
+  border-bottom: 1px solid var(--border, #dddfe2);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  select-field {
+    display: block;
+    width: 200px;
+    max-width: 100%;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.buscador {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+
+  input {
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #dddfe2);
+    background: var(--card, #ffffff);
+    color: var(--text-primary, #1c1e21);
+    font-size: 13.5px;
+    font-family: inherit;
+
+    &:focus-visible {
+      outline: 2px solid var(--bright, #1877f2);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.state-msg {
+  color: var(--text-muted, #90949c);
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.cursos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 16px;
+  }
+
+  .filtros {
+    flex-direction: column;
+  }
+
+  .filtros select-field,
+  .buscador {
+    width: 100%;
+    max-width: none;
+  }
+}

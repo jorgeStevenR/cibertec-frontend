@@ -7,43 +7,53 @@
 }
 
 .shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--bg);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 28px;
+.cabecera {
   background: var(--card);
   border-bottom: 1px solid var(--border);
 }
 
-.brand {
-  display: flex;
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 28px;
+}
 
-  .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-    background: var(--bright);
-    flex-shrink: 0;
+.titulo-sitio {
+  display: block;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--navy, #0c2b6b);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
   }
 
-  span {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--bright);
+  &:focus-visible {
+    outline: 2px solid var(--bright);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -154,7 +164,9 @@
   word-break: break-all;
 }
 
+.user-dropdown a,
 .user-dropdown button {
+  display: block;
   width: 100%;
   padding: 12px 16px;
   text-align: left;
@@ -162,9 +174,21 @@
   background: none;
   font-size: 14px;
   font-weight: 600;
-  color: var(--danger);
   cursor: pointer;
   font-family: inherit;
+  text-decoration: none;
+}
+
+.user-dropdown a {
+  color: var(--text-primary);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.user-dropdown button {
+  color: var(--danger);
 
   &:hover {
     background: rgba(228, 30, 63, 0.06);
@@ -174,9 +198,9 @@
 .tabs {
   display: flex;
   gap: 4px;
+  max-width: 1100px;
+  margin: 0 auto;
   padding: 0 28px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
 
   a {
     padding: 14px 6px;
@@ -199,6 +223,8 @@
 }
 
 .content {
+  flex: 1;
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 28px 60px;
@@ -207,6 +233,10 @@
 @media (max-width: 640px) {
   .topbar {
     padding: 12px 16px;
+  }
+
+  .titulo-sitio {
+    font-size: 18px;
   }
 
   .user-text {

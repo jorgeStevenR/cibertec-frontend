@@ -24,6 +24,7 @@ import { ActividadService } from '../../../core/services/actividad.service';
 import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
 import { CuestionarioService } from '../../../core/services/cuestionario.service';
+import { LienzoService } from '../../../core/services/lienzo.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
@@ -32,8 +33,9 @@ import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
 import { Bloque, TipoBloque } from '../../../core/models/bloque.model';
 import { Cuestionario } from '../../../core/models/cuestionario.model';
+import { LienzoResumen } from '../../../core/models/lienzo.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
-import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
+import { TIPO_CONTENIDO_LABELS, formatearFecha, formatearFechaRelativa } from '../../../core/utils/labels.util';
 
 interface ModuloConContenidos {
   modulo: Modulo;
@@ -42,6 +44,7 @@ interface ModuloConContenidos {
   bloques: Bloque[];
   cuestionarios: Cuestionario[];
   cuestionariosError: boolean;
+  paginas: LienzoResumen[];
 }
 
 type Tab = 'curso' | 'participantes';
@@ -78,6 +81,7 @@ export class ProfesorCursoDetallePage implements OnInit {
   private readonly entregaService = inject(EntregaService);
   private readonly bloqueService = inject(BloqueService);
   private readonly cuestionarioService = inject(CuestionarioService);
+  private readonly lienzoService = inject(LienzoService);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -95,10 +99,32 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly cargandoParticipantes = signal(false);
   private participantesCargados = false;
 
+  readonly navAbierta = signal(true);
+  readonly modulosColapsados = signal<Set<number>>(new Set());
+
+  toggleNav(): void {
+    this.navAbierta.update((valor) => !valor);
+  }
+
+  toggleModuloNav(moduloId: number): void {
+    const colapsados = new Set(this.modulosColapsados());
+    if (colapsados.has(moduloId)) {
+      colapsados.delete(moduloId);
+    } else {
+      colapsados.add(moduloId);
+    }
+    this.modulosColapsados.set(colapsados);
+  }
+
+  moduloColapsado(moduloId: number): boolean {
+    return this.modulosColapsados().has(moduloId);
+  }
+
   readonly participantesColumnas: DataTableColumn<Matricula>[] = [
     { key: 'nombre', label: 'Nombre', format: (m) => m.estudianteNombre || `Estudiante #${m.estudianteId}` },
     { key: 'email', label: 'Correo', format: (m) => m.estudianteEmail ?? '—' },
     { key: 'fecha', label: 'Matriculado', format: (m) => formatearFecha(m.fechaMatricula) },
+    { key: 'ultimoAcceso', label: 'Último acceso al curso', format: (m) => formatearFechaRelativa(m.fechaUltimoAcceso) },
   ];
 
   // --- Actividades ---
@@ -186,10 +212,14 @@ export class ProfesorCursoDetallePage implements OnInit {
   private arrastrando: { moduloId: number; bloqueId: number } | null = null;
 
   // --- Lienzo libre (editor tipo Canva) ---
-  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string } | null>(null);
+  readonly lienzoAbierto = signal<{ moduloId: number; titulo: string; paginaInicialId: number | null } | null>(null);
 
   abrirLienzo(moduloId: number, titulo: string): void {
-    this.lienzoAbierto.set({ moduloId, titulo });
+    this.lienzoAbierto.set({ moduloId, titulo, paginaInicialId: null });
+  }
+
+  abrirPagina(moduloId: number, paginaId: number, tituloModulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: paginaId });
   }
 
   cerrarLienzo(): void {
@@ -381,6 +411,8 @@ export class ProfesorCursoDetallePage implements OnInit {
                   return of({ items: [] as Cuestionario[], fallo: true });
                 }),
               ),
+              // No crítico: si falla, el módulo se ve igual sin las páginas del lienzo en la navegación.
+              paginas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
             }),
           ),
         ).subscribe({
@@ -393,6 +425,7 @@ export class ProfesorCursoDetallePage implements OnInit {
                 bloques: resultados[i].bloques,
                 cuestionarios: resultados[i].cuestionarios.items,
                 cuestionariosError: resultados[i].cuestionarios.fallo,
+                paginas: resultados[i].paginas,
               })),
             );
             this.cargando.set(false);

@@ -121,6 +121,21 @@
   }
 }
 
+.lienzo-pagina-renombrando input {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bright, #1877f2);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-primary, #1c1e21);
+  width: 130px;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
 .lienzo-pagina-cerrar {
   display: inline-flex;
   align-items: center;

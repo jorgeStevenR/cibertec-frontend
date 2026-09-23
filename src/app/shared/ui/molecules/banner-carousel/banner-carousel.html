@@ -1,7 +1,18 @@
 <div class="carousel">
   <div class="slide" *ngFor="let slide of slides(); let i = index" [class.active]="i === activo()">
+    <ng-container *ngIf="slide.imagen">
+      <img class="slide-img" [src]="slide.imagen" [alt]="slide.alt || ''" [attr.loading]="i === 0 ? null : 'lazy'" />
+      <div class="slide-overlay"></div>
+    </ng-container>
+
     <div class="slide-text">
-      <h2>{{ slide.titulo }}</h2>
+      <h2>
+        <ng-container *ngFor="let parte of slide.titulo">
+          <br *ngIf="parte.salto" />
+          <span class="accent" *ngIf="!parte.salto && parte.resaltado">{{ parte.texto }}</span>
+          <ng-container *ngIf="!parte.salto && !parte.resaltado">{{ parte.texto }}</ng-container>
+        </ng-container>
+      </h2>
       <p>{{ slide.subtitulo }}</p>
     </div>
 

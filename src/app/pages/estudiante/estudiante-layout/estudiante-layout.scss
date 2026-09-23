@@ -7,6 +7,8 @@
 }
 
 .shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--bg);
 }
@@ -34,13 +36,37 @@
   }
 }
 
+.cabecera-espacio {
+  display: flex;
+  align-items: center;
+
+  img {
+    height: 34px;
+    width: auto;
+    display: block;
+  }
+}
+
 .titulo-sitio {
+  display: block;
   margin: 0;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--navy, #0c2b6b);
   text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bright);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .nav {
@@ -205,6 +231,8 @@
 }
 
 .content {
+  flex: 1;
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   padding: 32px 28px 60px;

@@ -1,0 +1,31 @@
+<div class="curso-tile">
+  <a class="tile-portada" [routerLink]="routerLinkTarget()" [style.--portada]="portada()" aria-hidden="true"></a>
+
+  <div class="tile-body">
+    <a class="tile-titulo" [routerLink]="routerLinkTarget()">{{ titulo() }}</a>
+    <p class="tile-subtitulo" *ngIf="subtitulo()">{{ subtitulo() }}</p>
+
+    <div class="tile-footer">
+      <span class="tile-meta" *ngIf="meta()">{{ meta() }}</span>
+
+      <div class="tile-menu">
+        <button
+          type="button"
+          class="menu-trigger"
+          (click)="alternarMenu()"
+          aria-label="Más opciones del curso"
+          [attr.aria-expanded]="menuAbierto()"
+        >
+          ⋮
+        </button>
+
+        <div class="menu-backdrop" *ngIf="menuAbierto()" (click)="cerrarMenu()"></div>
+
+        <div class="menu-dropdown" *ngIf="menuAbierto()">
+          <a [routerLink]="routerLinkTarget()" (click)="cerrarMenu()">Ver curso</a>
+          <button type="button" (click)="onParticipantes()">Participantes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

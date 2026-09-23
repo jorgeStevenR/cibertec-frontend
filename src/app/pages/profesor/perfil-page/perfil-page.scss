@@ -1,0 +1,125 @@
+h1 {
+  margin: 0 0 20px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary, #1c1e21);
+}
+
+.perfil-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--bright, #1877f2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.perfil-nombre {
+  h2 {
+    margin: 0 0 2px;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--text-primary, #1c1e21);
+  }
+
+  .rol {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #90949c);
+  }
+}
+
+.perfil-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #dddfe2);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+h3 {
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #1c1e21);
+  border-bottom: 1px solid var(--border, #dddfe2);
+}
+
+dl {
+  margin: 0;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 13.5px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--border, #dddfe2);
+  }
+
+  dt {
+    color: var(--text-muted, #90949c);
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-primary, #1c1e21);
+    font-weight: 600;
+    text-align: right;
+  }
+}
+
+.state-msg {
+  color: var(--text-muted, #90949c);
+  font-size: 13.5px;
+  padding: 8px 0;
+}
+
+.cursos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  a {
+    display: block;
+    padding: 8px 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--bright, #1877f2);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--border, #dddfe2);
+    }
+  }
+}

@@ -22,16 +22,31 @@
     <p *ngIf="error()" class="lienzo-error">{{ error() }}</p>
 
     <div class="lienzo-paginas" *ngIf="!soloLectura">
-      <button
-        type="button"
-        *ngFor="let p of paginas(); trackBy: trackByPaginaId"
-        class="lienzo-pagina-tab"
-        [class.activa]="paginaActualId() === p.id"
-        (click)="seleccionarPagina(p.id)"
-      >
-        {{ p.nombre }}
-        <span class="lienzo-pagina-cerrar" (click)="eliminarPagina(p.id, $event)">✕</span>
-      </button>
+      <ng-container *ngFor="let p of paginas(); trackBy: trackByPaginaId">
+        <span class="lienzo-pagina-tab lienzo-pagina-renombrando" *ngIf="renombrandoPaginaId() === p.id">
+          <input
+            type="text"
+            [value]="renombrandoValor()"
+            (input)="renombrandoValor.set($any($event.target).value)"
+            (keydown.enter)="confirmarRenombrarPagina()"
+            (keydown.escape)="cancelarRenombrarPagina()"
+            (blur)="confirmarRenombrarPagina()"
+            autofocus
+          />
+        </span>
+        <button
+          type="button"
+          *ngIf="renombrandoPaginaId() !== p.id"
+          class="lienzo-pagina-tab"
+          [class.activa]="paginaActualId() === p.id"
+          (click)="seleccionarPagina(p.id)"
+          (dblclick)="iniciarRenombrarPagina(p, $event)"
+          title="Doble clic para renombrar"
+        >
+          {{ p.nombre }}
+          <span class="lienzo-pagina-cerrar" (click)="eliminarPagina(p.id, $event)">✕</span>
+        </button>
+      </ng-container>
       <button type="button" class="lienzo-pagina-nueva" [disabled]="creandoPagina()" (click)="nuevaPagina()">
         + Hoja
       </button>

@@ -1,0 +1,51 @@
+<h1>Mi perfil</h1>
+
+<div class="perfil-header">
+  <span class="avatar">{{ iniciales }}</span>
+  <div class="perfil-nombre">
+    <h2>{{ usuario?.nombre }} {{ usuario?.apellido }}</h2>
+    <p class="rol" *ngIf="usuario">{{ rolLabels[usuario.rol] }}</p>
+  </div>
+</div>
+
+<ui-alert [message]="error()"></ui-alert>
+
+<div class="perfil-grid">
+  <section class="card">
+    <h3>Detalles de usuario</h3>
+    <dl *ngIf="usuario">
+      <div class="fila">
+        <dt>Correo</dt>
+        <dd>{{ usuario.email }}</dd>
+      </div>
+      <div class="fila">
+        <dt>Rol</dt>
+        <dd>{{ rolLabels[usuario.rol] }}</dd>
+      </div>
+      <div class="fila">
+        <dt>Miembro desde</dt>
+        <dd>{{ formatearFecha(usuario.fechaCreacion) }}</dd>
+      </div>
+      <div class="fila">
+        <dt>Estado</dt>
+        <dd>{{ usuario.activo ? 'Activo' : 'Inactivo' }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h3>Mis cursos</h3>
+
+    <p *ngIf="cargando()" class="state-msg">Cargando…</p>
+
+    <p *ngIf="!cargando() && cursos().length === 0" class="state-msg">
+      Todavía no tienes cursos asignados.
+    </p>
+
+    <ul class="cursos-lista" *ngIf="!cargando() && cursos().length > 0">
+      <li *ngFor="let curso of cursos()">
+        <a [routerLink]="['/profesor', 'cursos', curso.id]">{{ curso.titulo }}</a>
+      </li>
+    </ul>
+  </section>
+</div>

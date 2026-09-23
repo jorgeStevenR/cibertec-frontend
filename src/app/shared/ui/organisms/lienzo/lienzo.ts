@@ -25,6 +25,8 @@ export class LienzoComponent implements OnInit {
   @Input({ required: true }) moduloId!: number;
   @Input() soloLectura = false;
   @Input() tituloModulo = '';
+  // Si se pasa, abre directo en esa hoja en vez de la primera (ej. al entrar desde la navegación).
+  @Input() paginaInicialId: number | null = null;
   @Output() cerrado = new EventEmitter<void>();
 
   private readonly lienzoService = inject(LienzoService);
@@ -33,6 +35,10 @@ export class LienzoComponent implements OnInit {
   readonly paginaActualId = signal<number | null>(null);
   readonly cargandoPaginas = signal(false);
   readonly creandoPagina = signal(false);
+
+  readonly renombrandoPaginaId = signal<number | null>(null);
+  readonly renombrandoValor = signal('');
+  readonly guardandoNombre = signal(false);
 
   readonly lienzo = signal<Lienzo>({ ...LIENZO_VACIO });
   readonly cargando = signal(false);
@@ -65,8 +71,9 @@ export class LienzoComponent implements OnInit {
       next: (paginas) => {
         this.paginas.set(paginas);
         this.cargandoPaginas.set(false);
-        if (paginas.length > 0) {
-          this.seleccionarPagina(paginas[0].id);
+        const inicial = paginas.find((p) => p.id === this.paginaInicialId) ?? paginas[0];
+        if (inicial) {
+          this.seleccionarPagina(inicial.id);
         } else {
           this.paginaActualId.set(null);
           this.lienzo.set({ ...LIENZO_VACIO });
@@ -116,6 +123,42 @@ export class LienzoComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.creandoPagina.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  iniciarRenombrarPagina(pagina: LienzoResumen, evento: Event): void {
+    evento.stopPropagation();
+    if (this.soloLectura) {
+      return;
+    }
+    this.renombrandoPaginaId.set(pagina.id);
+    this.renombrandoValor.set(pagina.nombre);
+  }
+
+  cancelarRenombrarPagina(): void {
+    this.renombrandoPaginaId.set(null);
+  }
+
+  confirmarRenombrarPagina(): void {
+    const id = this.renombrandoPaginaId();
+    const nombre = this.renombrandoValor().trim();
+    if (id == null || !nombre) {
+      this.renombrandoPaginaId.set(null);
+      return;
+    }
+    this.guardandoNombre.set(true);
+    this.error.set('');
+    this.lienzoService.renombrar(id, nombre).subscribe({
+      next: (pagina) => {
+        this.guardandoNombre.set(false);
+        this.renombrandoPaginaId.set(null);
+        this.paginas.set(this.paginas().map((p) => (p.id === id ? pagina : p)));
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoNombre.set(false);
+        this.renombrandoPaginaId.set(null);
         this.error.set(extraerMensajeError(err));
       },
     });

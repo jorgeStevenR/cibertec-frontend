@@ -1,40 +1,46 @@
 <div class="curso-card">
   <div class="card-body">
-    <div class="card-top">
-      <span class="codigo" *ngIf="codigo()">{{ codigo() }}</span>
-      <span class="badge" [class.badge-on]="publicado()">{{ publicado() ? 'Publicado' : 'Borrador' }}</span>
+    <div class="card-main">
+      <div class="card-info">
+        <div class="card-top">
+          <span class="codigo" *ngIf="codigo()">{{ codigo() }}</span>
+          <span class="badge" [class.badge-on]="publicado()">{{ publicado() ? 'Publicado' : 'Borrador' }}</span>
+        </div>
+
+        <h3>{{ titulo() }}</h3>
+
+        <span class="pendientes" *ngIf="pendientes() !== null" [class.al-dia]="pendientes() === 0">
+          {{ pendientes() }} {{ pendientes() === 1 ? 'actividad pendiente' : 'actividades pendientes' }}
+        </span>
+
+        <p class="vigencia" *ngIf="vigencia()">{{ vigencia() }}</p>
+
+        <cupo-estado *ngIf="matriculados() !== null" [matriculados]="matriculados()!" [cupoMaximo]="cupoMaximo()"></cupo-estado>
+
+        <ul class="meta-list" *ngIf="meta().length > 0">
+          <li *ngFor="let linea of meta()">{{ linea }}</li>
+        </ul>
+
+        <div class="docente" *ngIf="docenteNombre()">
+          <span class="docente-label">Docente</span>
+          <span class="docente-nombre">{{ docenteNombre() }}</span>
+          <span class="docente-email" *ngIf="docenteEmail()">{{ docenteEmail() }}</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button
+          type="button"
+          class="action-btn"
+          *ngIf="mostrarParticipantes()"
+          (click)="participantesClick.emit()"
+        >
+          👥 Participantes
+        </button>
+
+        <a class="action-btn action-btn-primary" [routerLink]="routerLinkTarget()">📖 {{ actionLabel() }}</a>
+      </div>
     </div>
-
-    <h3>{{ titulo() }}</h3>
-
-    <button
-      type="button"
-      class="participantes-btn"
-      *ngIf="mostrarParticipantes()"
-      (click)="participantesClick.emit()"
-    >
-      👥 Participantes
-    </button>
-
-    <span class="pendientes" *ngIf="pendientes() !== null" [class.al-dia]="pendientes() === 0">
-      {{ pendientes() }} {{ pendientes() === 1 ? 'actividad pendiente' : 'actividades pendientes' }}
-    </span>
-
-    <p class="vigencia" *ngIf="vigencia()">{{ vigencia() }}</p>
-
-    <cupo-estado *ngIf="matriculados() !== null" [matriculados]="matriculados()!" [cupoMaximo]="cupoMaximo()"></cupo-estado>
-
-    <ul class="meta-list" *ngIf="meta().length > 0">
-      <li *ngFor="let linea of meta()">{{ linea }}</li>
-    </ul>
-
-    <div class="docente" *ngIf="docenteNombre()">
-      <span class="docente-label">Docente</span>
-      <span class="docente-nombre">{{ docenteNombre() }}</span>
-      <span class="docente-email" *ngIf="docenteEmail()">{{ docenteEmail() }}</span>
-    </div>
-
-    <a class="card-action" [routerLink]="routerLinkTarget()">{{ actionLabel() }}</a>
   </div>
 
   <div class="card-progreso" *ngIf="progreso() !== null || reservarProgreso()">

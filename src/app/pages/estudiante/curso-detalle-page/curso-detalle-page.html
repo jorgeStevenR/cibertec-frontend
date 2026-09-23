@@ -1,49 +1,85 @@
-<a class="back-link" routerLink="/estudiante">← Volver a mis cursos</a>
-
-<ui-alert [message]="error()"></ui-alert>
-
-<ng-container *ngIf="curso() as c">
-  <div class="page-header">
-    <h1>{{ c.titulo }}</h1>
-    <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
-    <curso-datos
-      class="datos-curso"
-      [codigo]="c.codigo"
-      [periodo]="c.periodo"
-      [fechaInicio]="c.fechaInicio"
-      [fechaFin]="c.fechaFin"
-    ></curso-datos>
-  </div>
-
-  <div class="tabs">
-    <button type="button" class="tab" [class.active]="tabActiva() === 'curso'" (click)="seleccionarTab('curso')">
-      Curso
-    </button>
-    <button
-      type="button"
-      class="tab"
-      [class.active]="tabActiva() === 'participantes'"
-      (click)="seleccionarTab('participantes')"
-    >
-      Participantes
-    </button>
-  </div>
-</ng-container>
-
 <p *ngIf="cargando()" class="state-msg">Cargando…</p>
 
 <div class="course-layout" *ngIf="!cargando()">
-  <nav class="course-nav" *ngIf="modulos().length > 0">
-    <p class="nav-title">Navegación</p>
+  <nav class="course-nav" *ngIf="modulos().length > 0 && navAbierta()">
+    <div class="nav-header">
+      <p class="nav-title">Navegación</p>
+      <button type="button" class="nav-close" (click)="toggleNav()" aria-label="Cerrar navegación">✕</button>
+    </div>
+
     <div class="nav-section" *ngFor="let item of modulos()">
-      <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id">{{ item.modulo.titulo }}</a>
-      <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
-        {{ contenido.nombre }}
+      <button
+        type="button"
+        class="nav-section-toggle"
+        (click)="toggleModuloNav(item.modulo.id)"
+        [attr.aria-expanded]="!moduloColapsado(item.modulo.id)"
+      >
+        <span class="nav-chevron" [class.collapsed]="moduloColapsado(item.modulo.id)" aria-hidden="true">▾</span>
+        <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id" (click)="$event.stopPropagation()">
+          {{ item.modulo.titulo }}
+        </a>
       </button>
+
+      <ng-container *ngIf="!moduloColapsado(item.modulo.id)">
+        <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
+          {{ contenido.nombre }}
+        </button>
+        <button
+          type="button"
+          class="nav-item"
+          *ngFor="let pagina of item.paginas"
+          (click)="abrirPagina(item.modulo.id, pagina.id, item.modulo.titulo)"
+        >
+          📄 {{ pagina.nombre }}
+        </button>
+      </ng-container>
     </div>
   </nav>
 
+  <button
+    type="button"
+    class="nav-reabrir"
+    *ngIf="modulos().length > 0 && !navAbierta()"
+    (click)="toggleNav()"
+    aria-label="Abrir navegación"
+    title="Navegación"
+  >
+    ☰
+  </button>
+
   <div class="course-main">
+    <a class="back-link" routerLink="/estudiante">← Volver a mis cursos</a>
+
+    <ui-alert [message]="error()"></ui-alert>
+
+    <ng-container *ngIf="curso() as c">
+      <div class="page-header">
+        <h1>{{ c.titulo }}</h1>
+        <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
+        <curso-datos
+          class="datos-curso"
+          [codigo]="c.codigo"
+          [periodo]="c.periodo"
+          [fechaInicio]="c.fechaInicio"
+          [fechaFin]="c.fechaFin"
+        ></curso-datos>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab" [class.active]="tabActiva() === 'curso'" (click)="seleccionarTab('curso')">
+          Curso
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.active]="tabActiva() === 'participantes'"
+          (click)="seleccionarTab('participantes')"
+        >
+          Participantes
+        </button>
+      </div>
+    </ng-container>
+
     <ng-container *ngIf="tabActiva() === 'curso'">
       <div *ngIf="modulos().length === 0" class="state-msg">
         Este curso todavía no tiene módulos disponibles.
@@ -211,6 +247,7 @@
   *ngIf="lienzoAbierto() as l"
   [moduloId]="l.moduloId"
   [tituloModulo]="l.titulo"
+  [paginaInicialId]="l.paginaInicialId"
   [soloLectura]="true"
   (cerrado)="cerrarLienzo()"
 ></app-lienzo>

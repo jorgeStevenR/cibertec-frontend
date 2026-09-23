@@ -7,6 +7,7 @@ import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { WelcomeBanner } from '../../../shared/ui/molecules/welcome-banner/welcome-banner';
 import { BannerCarousel } from '../../../shared/ui/molecules/banner-carousel/banner-carousel';
 import { CursoCard } from '../../../shared/ui/molecules/curso-card/curso-card';
+import { CursoCardSkeleton } from '../../../shared/ui/molecules/curso-card-skeleton/curso-card-skeleton';
 import { Pagination } from '../../../shared/ui/molecules/pagination/pagination';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
@@ -24,7 +25,7 @@ const TAMANO_PAGINA = 6;
 @Component({
   selector: 'app-profesor-cursos-page',
   standalone: true,
-  imports: [CommonModule, UiAlert, WelcomeBanner, BannerCarousel, CursoCard, Pagination],
+  imports: [CommonModule, UiAlert, WelcomeBanner, BannerCarousel, CursoCard, CursoCardSkeleton, Pagination],
   templateUrl: './cursos-page.html',
   styleUrl: './cursos-page.scss',
 })
@@ -37,6 +38,7 @@ export class ProfesorCursosPage implements OnInit {
   readonly cursos = signal<CursoConDetalle[]>([]);
   readonly cargando = signal(false);
   readonly error = signal('');
+  readonly esqueletos = Array(TAMANO_PAGINA);
 
   readonly formatearFecha = formatearFecha;
 

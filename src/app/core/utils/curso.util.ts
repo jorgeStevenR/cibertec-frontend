@@ -55,6 +55,19 @@ export function datosAcademicosCompletos(curso: Curso): boolean {
   return !!curso.codigo && !!curso.periodo && !!curso.fechaInicio && !!curso.fechaFin;
 }
 
+// Degradé decorativo para la portada de la tarjeta de curso: mismo texto siempre da el mismo
+// color (hash simple del título), así cada curso se distingue visualmente sin subir imágenes.
+export function colorPortada(texto: string): string {
+  let hash = 0;
+  for (let i = 0; i < texto.length; i++) {
+    hash = (hash << 5) - hash + texto.charCodeAt(i);
+    hash |= 0;
+  }
+  const tono = Math.abs(hash) % 360;
+  const tonoSecundario = (tono + 45) % 360;
+  return `linear-gradient(135deg, hsl(${tono} 70% 55%), hsl(${tonoSecundario} 70% 40%))`;
+}
+
 function sinTildes(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }

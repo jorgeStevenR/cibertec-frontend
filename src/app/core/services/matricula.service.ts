@@ -24,4 +24,8 @@ export class MatriculaService {
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+
+  registrarAcceso(cursoId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/curso/${cursoId}/registrar-acceso`, null);
+  }
 }

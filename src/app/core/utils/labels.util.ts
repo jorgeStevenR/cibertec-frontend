@@ -48,3 +48,37 @@ export function formatearFecha(iso: string): string {
   }
   return fecha.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+// null -> "Nunca"; reciente -> "hace X minutos/horas/días"; más de 30 días -> dd/MM/yyyy HH:mm.
+export function formatearFechaRelativa(iso: string | null): string {
+  if (!iso) {
+    return 'Nunca';
+  }
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) {
+    return iso;
+  }
+
+  const segundos = Math.round((Date.now() - fecha.getTime()) / 1000);
+  if (segundos < 60) {
+    return 'hace instantes';
+  }
+  const minutos = Math.round(segundos / 60);
+  if (minutos < 60) {
+    return `hace ${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`;
+  }
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) {
+    return `hace ${horas} ${horas === 1 ? 'hora' : 'horas'}`;
+  }
+  const dias = Math.round(horas / 24);
+  if (dias < 30) {
+    return `hace ${dias} ${dias === 1 ? 'día' : 'días'}`;
+  }
+
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const hh = String(fecha.getHours()).padStart(2, '0');
+  const min = String(fecha.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${fecha.getFullYear()} ${hh}:${min}`;
+}
