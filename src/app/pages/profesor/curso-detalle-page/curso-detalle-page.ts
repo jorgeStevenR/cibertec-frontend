@@ -1,20 +1,26 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, Directive, OnInit, computed, inject, signal, viewChildren } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
+import { SelectField } from '../../../shared/ui/molecules/select-field/select-field';
+import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
 import { TextareaField } from '../../../shared/ui/molecules/textarea-field/textarea-field';
 import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
 import { CuestionarioEditorComponent } from '../../../shared/ui/organisms/cuestionario-editor/cuestionario-editor';
-import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
+import {
+  AgregarRecursoSelector,
+  TipoRecurso,
+} from '../../../shared/ui/organisms/agregar-recurso-selector/agregar-recurso-selector';
+import { BloquesEditor } from '../../../shared/ui/organisms/bloques-editor/bloques-editor';
 import { CursoDatos } from '../../../shared/ui/molecules/curso-datos/curso-datos';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
@@ -25,16 +31,20 @@ import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
 import { CuestionarioService } from '../../../core/services/cuestionario.service';
 import { LienzoService } from '../../../core/services/lienzo.service';
+import { PaginaModuloService } from '../../../core/services/pagina-modulo.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
 import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
-import { Bloque, TipoBloque } from '../../../core/models/bloque.model';
+import { Bloque } from '../../../core/models/bloque.model';
 import { Cuestionario } from '../../../core/models/cuestionario.model';
 import { LienzoResumen } from '../../../core/models/lienzo.model';
-import { extraerMensajeError } from '../../../core/utils/http-error.util';
+import { PAGINA_MODULO_TITULO_MAX, PaginaModulo } from '../../../core/models/pagina-modulo.model';
+import { extraerErroresPorCampo, extraerMensajeError } from '../../../core/utils/http-error.util';
+import { moverElemento } from '../../../core/utils/orden.util';
+import { aplanarArbol, armarArbolModulos, idsDelGrupo, moverModulo } from '../../../core/utils/modulo-arbol.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha, formatearFechaRelativa } from '../../../core/utils/labels.util';
 
 interface ModuloConContenidos {
@@ -44,10 +54,43 @@ interface ModuloConContenidos {
   bloques: Bloque[];
   cuestionarios: Cuestionario[];
   cuestionariosError: boolean;
-  paginas: LienzoResumen[];
+  paginas: PaginaModulo[];
+  paginasError: boolean;
+  // Hojas del lienzo (diseño libre); no confundir con las páginas del módulo.
+  hojas: LienzoResumen[];
 }
 
 type Tab = 'curso' | 'participantes';
+
+interface ContextoTarjetaModulo {
+  $implicit: ModuloConContenidos;
+  indice: number;
+  total: number;
+  esHijo: boolean;
+}
+
+interface ContextoNavModulo {
+  $implicit: ModuloConContenidos;
+  esHijo: boolean;
+}
+
+// Dan tipo al contexto de los ng-template de módulo (sin esto, 'item' sería any).
+@Directive({ selector: 'ng-template[tarjetaModulo]', standalone: true })
+export class TarjetaModuloTemplate {
+  static ngTemplateContextGuard(_dir: TarjetaModuloTemplate, ctx: unknown): ctx is ContextoTarjetaModulo {
+    return true;
+  }
+}
+
+@Directive({ selector: 'ng-template[navModulo]', standalone: true })
+export class NavModuloTemplate {
+  static ngTemplateContextGuard(_dir: NavModuloTemplate, ctx: unknown): ctx is ContextoNavModulo {
+    return true;
+  }
+}
+
+// Valor del select de módulo padre que representa "sin padre" (los ids van como texto).
+const SIN_PADRE = 'raiz';
 
 @Component({
   selector: 'app-profesor-curso-detalle-page',
@@ -60,13 +103,17 @@ type Tab = 'curso' | 'participantes';
     UiAlert,
     UiButton,
     FormField,
+    SelectField,
     TextareaField,
     UiModal,
     DataTable,
     ConfirmDialog,
     LienzoComponent,
     CuestionarioEditorComponent,
-    EmbedVideoUrlPipe,
+    AgregarRecursoSelector,
+    TarjetaModuloTemplate,
+    NavModuloTemplate,
+    BloquesEditor,
   ],
   templateUrl: './curso-detalle-page.html',
   styleUrl: './curso-detalle-page.scss',
@@ -79,10 +126,12 @@ export class ProfesorCursoDetallePage implements OnInit {
   private readonly matriculaService = inject(MatriculaService);
   private readonly actividadService = inject(ActividadService);
   private readonly entregaService = inject(EntregaService);
-  private readonly bloqueService = inject(BloqueService);
   private readonly cuestionarioService = inject(CuestionarioService);
   private readonly lienzoService = inject(LienzoService);
   private readonly fb = inject(FormBuilder);
+  private readonly bloqueService = inject(BloqueService);
+  private readonly router = inject(Router);
+  private readonly paginaModuloService = inject(PaginaModuloService);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -177,49 +226,43 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly moduloEditando = signal<Modulo | null>(null);
   readonly guardandoModulo = signal(false);
 
-  readonly moduloForm = this.fb.group({
-    titulo: ['', [Validators.required]],
-    orden: [1, [Validators.required, Validators.min(1)]],
+  readonly errorModulo = signal('');
+
+  readonly moduloForm = this.fb.nonNullable.group({
+    titulo: ['', [Validators.required, Validators.pattern(/\S/)]],
+    moduloPadreId: [SIN_PADRE as string],
   });
 
   readonly confirmEliminarModuloAbierto = signal(false);
   readonly moduloAEliminar = signal<Modulo | null>(null);
   readonly eliminandoModulo = signal(false);
 
-  // --- Bloques (editor de contenido) ---
-  readonly agregarBloqueModalAbierto = signal(false);
-  readonly agregarBloqueModuloId = signal<number | null>(null);
-  readonly agregarBloqueTipo = signal<TipoBloque>('TEXTO');
-  readonly nuevoTextoValor = signal('');
-  readonly nuevoVideoValor = signal('');
-  readonly subiendoArchivoBloque = signal<number | null>(null);
-  readonly dragOverModuloId = signal<number | null>(null);
+  // --- Bloques sueltos del módulo (la edición vive en BloquesEditor) ---
+  private readonly editoresBloques = viewChildren(BloquesEditor);
 
-  readonly nuevoPersonajeImagen = signal<File | null>(null);
-  readonly nuevoPersonajeTexto = signal('');
-  readonly guardandoPersonaje = signal(false);
-  readonly personajeImagenUrls = signal<Record<number, string>>({});
-  readonly personajeFraseIndice = signal<Record<number, number>>({});
+  // --- Páginas del módulo (recurso "Página") ---
+  readonly paginaModalAbierto = signal(false);
+  readonly paginaEditando = signal<PaginaModulo | null>(null);
+  readonly guardandoPagina = signal(false);
+  readonly errorPagina = signal('');
+  readonly paginaTituloMax = PAGINA_MODULO_TITULO_MAX;
 
-  readonly bloqueEditandoId = signal<number | null>(null);
-  readonly textoEditandoValor = signal('');
-  readonly guardandoBloque = signal(false);
+  readonly paginaForm = this.fb.nonNullable.group({
+    titulo: ['', [Validators.required, Validators.maxLength(PAGINA_MODULO_TITULO_MAX), Validators.pattern(/\S/)]],
+  });
 
-  readonly confirmEliminarBloqueAbierto = signal(false);
-  readonly bloqueAEliminar = signal<Bloque | null>(null);
-  readonly eliminandoBloque = signal(false);
+  readonly paginaAEliminar = signal<PaginaModulo | null>(null);
+  readonly eliminandoPagina = signal(false);
 
-  private arrastrando: { moduloId: number; bloqueId: number } | null = null;
-
-  // --- Lienzo libre (editor tipo Canva) ---
+  // --- Lienzo libre (editor tipo Canva). Sus "hojas" no son las Páginas del módulo. ---
   readonly lienzoAbierto = signal<{ moduloId: number; titulo: string; paginaInicialId: number | null } | null>(null);
 
   abrirLienzo(moduloId: number, titulo: string): void {
     this.lienzoAbierto.set({ moduloId, titulo, paginaInicialId: null });
   }
 
-  abrirPagina(moduloId: number, paginaId: number, tituloModulo: string): void {
-    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: paginaId });
+  abrirHoja(moduloId: number, hojaId: number, tituloModulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: hojaId });
   }
 
   cerrarLienzo(): void {
@@ -387,7 +430,8 @@ export class ProfesorCursoDetallePage implements OnInit {
     }).subscribe({
       next: ({ curso, modulos }) => {
         this.curso.set(curso);
-        const ordenados = [...modulos].sort((a, b) => a.orden - b.orden);
+        // Orden de lectura: cada raíz seguida de sus submódulos.
+        const ordenados = aplanarArbol(armarArbolModulos(modulos));
 
         if (ordenados.length === 0) {
           this.modulos.set([]);
@@ -411,8 +455,16 @@ export class ProfesorCursoDetallePage implements OnInit {
                   return of({ items: [] as Cuestionario[], fallo: true });
                 }),
               ),
-              // No crítico: si falla, el módulo se ve igual sin las páginas del lienzo en la navegación.
-              paginas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
+              // Mismo criterio que cuestionarios: no tumba el módulo, pero el fallo se ve.
+              paginas: this.paginaModuloService.listarPorModulo(m.id).pipe(
+                map((items) => ({ items, fallo: false })),
+                catchError((err: HttpErrorResponse) => {
+                  console.error(`Fallo al cargar las páginas del módulo ${m.id}`, err);
+                  return of({ items: [] as PaginaModulo[], fallo: true });
+                }),
+              ),
+              // No crítico: si falla, el módulo se ve igual sin las hojas del lienzo en la navegación.
+              hojas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
             }),
           ),
         ).subscribe({
@@ -425,12 +477,12 @@ export class ProfesorCursoDetallePage implements OnInit {
                 bloques: resultados[i].bloques,
                 cuestionarios: resultados[i].cuestionarios.items,
                 cuestionariosError: resultados[i].cuestionarios.fallo,
-                paginas: resultados[i].paginas,
+                paginas: resultados[i].paginas.items,
+                paginasError: resultados[i].paginas.fallo,
+                hojas: resultados[i].hojas,
               })),
             );
             this.cargando.set(false);
-            const personajes = resultados.flatMap((r) => r.bloques.filter((b) => b.tipo === 'PERSONAJE'));
-            this.cargarImagenesPersonaje(personajes);
           },
           error: (err: HttpErrorResponse) => {
             this.cargando.set(false);
@@ -617,18 +669,72 @@ export class ProfesorCursoDetallePage implements OnInit {
 
   // --- Módulos ---
 
-  abrirCrearModulo(): void {
+  // --- Árbol de módulos (raíces con submódulos, un solo nivel) ---
+
+  readonly arbol = computed(() => {
+    const items = this.modulos();
+    const porId = new Map(items.map((i) => [i.modulo.id, i]));
+    return armarArbolModulos(items.map((i) => i.modulo)).map((rama) => ({
+      item: porId.get(rama.modulo.id)!,
+      hijos: rama.hijos.map((h) => porId.get(h.id)!),
+    }));
+  });
+
+  readonly raicesColapsadas = signal<Set<number>>(new Set());
+
+  toggleSubmodulos(moduloId: number): void {
+    this.raicesColapsadas.update((actual) => {
+      const nuevo = new Set(actual);
+      if (nuevo.has(moduloId)) {
+        nuevo.delete(moduloId);
+      } else {
+        nuevo.add(moduloId);
+      }
+      return nuevo;
+    });
+  }
+
+  // Opciones del select "Módulo padre": solo raíces, sin el propio módulo.
+  opcionesPadre(): UiSelectOption[] {
+    const editando = this.moduloModoEdicion() ? this.moduloEditando() : null;
+    return [
+      { value: SIN_PADRE, label: 'Sin padre / raíz' },
+      ...this.arbol()
+        .filter((rama) => rama.item.modulo.id !== editando?.id)
+        .map((rama) => ({ value: String(rama.item.modulo.id), label: rama.item.modulo.titulo })),
+    ];
+  }
+
+  // Un módulo con submódulos no puede pasar a ser submódulo (el backend lo rechaza).
+  editandoTieneHijos(): boolean {
+    const editando = this.moduloModoEdicion() ? this.moduloEditando() : null;
+    return !!editando && this.modulos().some((i) => i.modulo.moduloPadreId === editando.id);
+  }
+
+  abrirCrearModulo(padreId: number | null = null): void {
     this.moduloModoEdicion.set(false);
     this.moduloEditando.set(null);
-    const siguienteOrden = this.modulos().length + 1;
-    this.moduloForm.reset({ titulo: '', orden: siguienteOrden });
+    this.errorModulo.set('');
+    this.moduloForm.reset({ titulo: '', moduloPadreId: padreId === null ? SIN_PADRE : String(padreId) });
+    this.moduloForm.controls.moduloPadreId.enable();
     this.moduloModalAbierto.set(true);
   }
 
   abrirEditarModulo(modulo: Modulo): void {
     this.moduloModoEdicion.set(true);
     this.moduloEditando.set(modulo);
-    this.moduloForm.reset({ titulo: modulo.titulo, orden: modulo.orden });
+    this.errorModulo.set('');
+    this.moduloForm.reset({
+      titulo: modulo.titulo,
+      moduloPadreId: modulo.moduloPadreId === null ? SIN_PADRE : String(modulo.moduloPadreId),
+    });
+    // Con submódulos solo puede seguir siendo raíz: el select queda bloqueado
+    // (getRawValue igual lo incluye, así el PUT manda moduloPadreId: null).
+    if (this.editandoTieneHijos()) {
+      this.moduloForm.controls.moduloPadreId.disable();
+    } else {
+      this.moduloForm.controls.moduloPadreId.enable();
+    }
     this.moduloModalAbierto.set(true);
   }
 
@@ -642,12 +748,20 @@ export class ProfesorCursoDetallePage implements OnInit {
       return;
     }
 
-    this.guardandoModulo.set(true);
-    this.error.set('');
     const valores = this.moduloForm.getRawValue();
-    const datos = { titulo: valores.titulo!, orden: Number(valores.orden) };
-
+    const moduloPadreId = valores.moduloPadreId === SIN_PADRE ? null : Number(valores.moduloPadreId);
     const editando = this.moduloModoEdicion() ? this.moduloEditando() : null;
+    const hermanos = idsDelGrupo(
+      this.modulos().map((i) => i.modulo),
+      moduloPadreId,
+    ).filter((id) => id !== editando?.id);
+    // Si se queda en el mismo grupo conserva su orden; si cambia de grupo (o es nuevo), va al final.
+    const orden = editando && editando.moduloPadreId === moduloPadreId ? editando.orden : hermanos.length + 1;
+    // moduloPadreId va siempre: si se omite, el backend mueve el módulo a la raíz.
+    const datos = { titulo: valores.titulo.trim(), orden, moduloPadreId };
+
+    this.guardandoModulo.set(true);
+    this.errorModulo.set('');
     const obs = editando
       ? this.moduloService.actualizar(editando.id, datos)
       : this.moduloService.crear(this.cursoId, datos);
@@ -660,6 +774,120 @@ export class ProfesorCursoDetallePage implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.guardandoModulo.set(false);
+        this.errorModulo.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // --- Mover módulos: arrastrando o con ↑/↓ ---
+
+  readonly moduloArrastrado = signal<number | null>(null);
+  readonly destinoResaltado = signal<string | null>(null);
+  readonly moviendoModulo = signal(false);
+
+  inicioArrastreModulo(evento: DragEvent, moduloId: number): void {
+    // Firefox no inicia el arrastre sin datos.
+    evento.dataTransfer?.setData('text/plain', `modulo-${moduloId}`);
+    if (evento.dataTransfer) {
+      evento.dataTransfer.effectAllowed = 'move';
+    }
+    // Diferido: cambiar el DOM (zonas de "soltar acá") dentro de dragstart hace
+    // que Chrome cancele el arrastre.
+    setTimeout(() => this.moduloArrastrado.set(moduloId));
+  }
+
+  finArrastreModulo(): void {
+    this.moduloArrastrado.set(null);
+    this.destinoResaltado.set(null);
+  }
+
+  sobreDestino(evento: DragEvent, clave: string): void {
+    if (this.moduloArrastrado() === null) {
+      return;
+    }
+    evento.preventDefault();
+    this.destinoResaltado.set(clave);
+  }
+
+  salirDeDestino(clave: string): void {
+    if (this.destinoResaltado() === clave) {
+      this.destinoResaltado.set(null);
+    }
+  }
+
+  /** Soltar sobre la cabecera de un módulo: queda justo antes de él, como su hermano. */
+  soltarAntesDe(evento: DragEvent, destino: Modulo): void {
+    const id = this.moduloArrastrado();
+    this.finArrastreModulo();
+    if (id === null || id === destino.id) {
+      return;
+    }
+    evento.preventDefault();
+    const grupo = idsDelGrupo(
+      this.modulos().map((i) => i.modulo),
+      destino.moduloPadreId,
+    ).filter((x) => x !== id);
+    this.moverModuloA(id, destino.moduloPadreId, grupo.indexOf(destino.id));
+  }
+
+  /** Soltar en la zona "dentro de X" (padreId) o "al final de la raíz" (null). */
+  soltarAlFinal(evento: DragEvent, padreId: number | null): void {
+    const id = this.moduloArrastrado();
+    this.finArrastreModulo();
+    if (id === null || id === padreId) {
+      return;
+    }
+    evento.preventDefault();
+    this.moverModuloA(id, padreId);
+  }
+
+  moverEntreHermanos(modulo: Modulo, indice: number, delta: -1 | 1): void {
+    this.moverModuloA(modulo.id, modulo.moduloPadreId, indice + delta);
+  }
+
+  /**
+   * Optimista: se ve al instante y se revierte si el backend responde error
+   * (ej. 400 por anidar un tercer nivel), mostrando su mensaje tal cual.
+   */
+  private moverModuloA(moduloId: number, nuevoPadreId: number | null, indice?: number): void {
+    const anterior = this.modulos();
+    const modulo = anterior.find((i) => i.modulo.id === moduloId)?.modulo;
+    if (!modulo || this.moviendoModulo()) {
+      return;
+    }
+    const lista = moverModulo(
+      anterior.map((i) => i.modulo),
+      moduloId,
+      nuevoPadreId,
+      indice,
+    );
+    const actualizado = lista.find((m) => m.id === moduloId)!;
+    const sinCambios = lista.every((m) => {
+      const previo = anterior.find((i) => i.modulo.id === m.id)!.modulo;
+      return previo.orden === m.orden && previo.moduloPadreId === m.moduloPadreId;
+    });
+    if (sinCambios) {
+      return;
+    }
+
+    const porId = new Map(lista.map((m) => [m.id, m]));
+    this.modulos.set(anterior.map((i) => ({ ...i, modulo: porId.get(i.modulo.id)! })));
+    this.error.set('');
+    this.moviendoModulo.set(true);
+
+    const idsNuevoGrupo = idsDelGrupo(lista, nuevoPadreId);
+    const peticion =
+      modulo.moduloPadreId === nuevoPadreId
+        ? this.moduloService.reordenar(this.cursoId, nuevoPadreId, idsNuevoGrupo)
+        : this.moduloService
+            .actualizar(moduloId, { titulo: modulo.titulo, orden: actualizado.orden, moduloPadreId: nuevoPadreId })
+            .pipe(switchMap(() => this.moduloService.reordenar(this.cursoId, nuevoPadreId, idsNuevoGrupo)));
+
+    peticion.subscribe({
+      next: () => this.moviendoModulo.set(false),
+      error: (err: HttpErrorResponse) => {
+        this.moviendoModulo.set(false);
+        this.modulos.set(anterior);
         this.error.set(extraerMensajeError(err));
       },
     });
@@ -690,375 +918,168 @@ export class ProfesorCursoDetallePage implements OnInit {
     });
   }
 
-  // --- Bloques (editor de contenido) ---
+  // --- Bloques sueltos del módulo ---
 
-  private actualizarBloquesDelModulo(moduloId: number, bloques: Bloque[]): void {
-    this.modulos.set(
-      this.modulos().map((item) => (item.modulo.id === moduloId ? { ...item, bloques } : item)),
+  actualizarBloquesDelModulo(moduloId: number, bloques: Bloque[]): void {
+    this.modulos.update((lista) => lista.map((item) => (item.modulo.id === moduloId ? { ...item, bloques } : item)));
+  }
+
+  // --- Selector único "Agregar actividad o recurso" ---
+  readonly selectorRecursoModulo = signal<Modulo | null>(null);
+
+  abrirSelectorRecurso(modulo: Modulo): void {
+    this.selectorRecursoModulo.set(modulo);
+  }
+
+  cerrarSelectorRecurso(): void {
+    this.selectorRecursoModulo.set(null);
+  }
+
+  // Cada opción abre el mismo flujo de creación que ya existía para ese tipo.
+  elegirRecurso(tipo: TipoRecurso): void {
+    const modulo = this.selectorRecursoModulo();
+    this.selectorRecursoModulo.set(null);
+    if (!modulo) {
+      return;
+    }
+    switch (tipo) {
+      case 'ACTIVIDAD':
+        this.abrirCrearActividad(modulo.id);
+        break;
+      case 'CUESTIONARIO':
+        this.abrirCrearCuestionario(modulo.id);
+        break;
+      case 'LIENZO':
+        this.abrirLienzo(modulo.id, modulo.titulo);
+        break;
+      case 'PAGINA':
+        this.abrirCrearPagina(modulo.id);
+        break;
+      default:
+        this.editoresBloques()
+          .find((editor) => editor.contenedor().id === modulo.id)
+          ?.iniciarAgregar(tipo);
+    }
+  }
+
+  moduloVacio(item: ModuloConContenidos): boolean {
+    return (
+      item.bloques.length === 0 &&
+      item.contenidos.length === 0 &&
+      item.actividades.length === 0 &&
+      item.cuestionarios.length === 0 &&
+      !item.cuestionariosError &&
+      item.paginas.length === 0 &&
+      !item.paginasError &&
+      item.hojas.length === 0
     );
   }
 
-  abrirAgregarBloque(moduloId: number): void {
-    this.agregarBloqueModuloId.set(moduloId);
-    this.agregarBloqueTipo.set('TEXTO');
-    this.nuevoTextoValor.set('');
-    this.nuevoVideoValor.set('');
-    this.nuevoPersonajeImagen.set(null);
-    this.nuevoPersonajeTexto.set('');
-    this.agregarBloqueModalAbierto.set(true);
+  // --- Páginas del módulo ---
+
+  abrirCrearPagina(moduloId: number): void {
+    this.moduloActivo.set(moduloId);
+    this.paginaEditando.set(null);
+    this.paginaForm.reset({ titulo: '' });
+    this.errorPagina.set('');
+    this.paginaModalAbierto.set(true);
   }
 
-  cerrarModalAgregarBloque(): void {
-    this.agregarBloqueModalAbierto.set(false);
+  abrirRenombrarPagina(pagina: PaginaModulo): void {
+    this.moduloActivo.set(pagina.moduloId);
+    this.paginaEditando.set(pagina);
+    this.paginaForm.reset({ titulo: pagina.titulo });
+    this.errorPagina.set('');
+    this.paginaModalAbierto.set(true);
   }
 
-  seleccionarTipoBloque(tipo: TipoBloque): void {
-    this.agregarBloqueTipo.set(tipo);
+  cerrarModalPagina(): void {
+    this.paginaModalAbierto.set(false);
   }
 
-  guardarNuevoTexto(): void {
-    const moduloId = this.agregarBloqueModuloId();
-    const texto = this.nuevoTextoValor().trim();
-    if (moduloId == null || !texto) {
+  guardarPagina(): void {
+    if (this.paginaForm.invalid) {
+      this.paginaForm.markAllAsTouched();
       return;
     }
-    this.guardandoBloque.set(true);
-    this.error.set('');
-    this.bloqueService.crearTexto(moduloId, texto).subscribe({
-      next: (bloque) => {
-        this.guardandoBloque.set(false);
-        this.agregarBloqueModalAbierto.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoBloque.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
-
-  guardarNuevoVideo(): void {
-    const moduloId = this.agregarBloqueModuloId();
-    const url = this.nuevoVideoValor().trim();
-    if (moduloId == null || !url) {
+    const moduloId = this.moduloActivo();
+    if (moduloId == null) {
       return;
     }
-    this.guardandoBloque.set(true);
-    this.error.set('');
-    this.bloqueService.crearVideo(moduloId, url).subscribe({
-      next: (bloque) => {
-        this.guardandoBloque.set(false);
-        this.agregarBloqueModalAbierto.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoBloque.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
+    const datos = { titulo: this.paginaForm.getRawValue().titulo.trim() };
+    const editando = this.paginaEditando();
+    this.guardandoPagina.set(true);
+    this.errorPagina.set('');
 
-  onArchivoBloqueSeleccionado(evento: Event, tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>): void {
-    const moduloId = this.agregarBloqueModuloId();
-    const input = evento.target as HTMLInputElement;
-    const archivo = input.files?.[0];
-    if (moduloId == null || !archivo) {
-      return;
-    }
-    this.subirArchivoAModulo(moduloId, tipo, archivo, () => {
-      input.value = '';
-      this.agregarBloqueModalAbierto.set(false);
-    });
-  }
+    const obs = editando
+      ? this.paginaModuloService.actualizar(editando.id, datos)
+      : this.paginaModuloService.crear(moduloId, datos);
 
-  private subirArchivoAModulo(
-    moduloId: number,
-    tipo: Extract<TipoBloque, 'IMAGEN' | 'ARCHIVO'>,
-    archivo: File,
-    alTerminar?: () => void,
-  ): void {
-    this.subiendoArchivoBloque.set(moduloId);
-    this.error.set('');
-    this.bloqueService.subirArchivo(moduloId, tipo, archivo).subscribe({
-      next: (bloque) => {
-        this.subiendoArchivoBloque.set(null);
-        alTerminar?.();
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.subiendoArchivoBloque.set(null);
-        alTerminar?.();
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
-
-  private crearTextoRapido(moduloId: number, texto: string): void {
-    this.guardandoBloque.set(true);
-    this.error.set('');
-    this.bloqueService.crearTexto(moduloId, texto).subscribe({
-      next: (bloque) => {
-        this.guardandoBloque.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoBloque.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
-
-  private crearVideoRapido(moduloId: number, url: string): void {
-    this.guardandoBloque.set(true);
-    this.error.set('');
-    this.bloqueService.crearVideo(moduloId, url).subscribe({
-      next: (bloque) => {
-        this.guardandoBloque.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoBloque.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
-
-  // --- Bloque "Personaje" (imagen + diálogo editable por el profesor) ---
-
-  onImagenPersonajeSeleccionada(evento: Event): void {
-    const input = evento.target as HTMLInputElement;
-    this.nuevoPersonajeImagen.set(input.files?.[0] ?? null);
-  }
-
-  guardarNuevoPersonaje(): void {
-    const moduloId = this.agregarBloqueModuloId();
-    const imagen = this.nuevoPersonajeImagen();
-    const texto = this.nuevoPersonajeTexto().trim();
-    if (moduloId == null || !imagen || !texto) {
-      return;
-    }
-    this.guardandoPersonaje.set(true);
-    this.error.set('');
-    this.bloqueService.crearPersonaje(moduloId, imagen, texto).subscribe({
-      next: (bloque) => {
-        this.guardandoPersonaje.set(false);
-        this.nuevoPersonajeImagen.set(null);
-        this.nuevoPersonajeTexto.set('');
-        this.agregarBloqueModalAbierto.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(moduloId, [...(item?.bloques ?? []), bloque]);
-        this.cargarImagenesPersonaje([bloque]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoPersonaje.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
-
-  private cargarImagenesPersonaje(bloques: Bloque[]): void {
-    for (const bloque of bloques) {
-      this.bloqueService.obtenerUrl(bloque.id).subscribe({
-        next: (respuesta) => {
-          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
-        },
-      });
-    }
-  }
-
-  frasesPersonaje(bloque: Bloque): string[] {
-    return (bloque.texto ?? '')
-      .split('\n')
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-  }
-
-  fraseActualPersonaje(bloque: Bloque): string {
-    const frases = this.frasesPersonaje(bloque);
-    if (frases.length === 0) {
-      return '';
-    }
-    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
-    return frases[Math.min(indice, frases.length - 1)];
-  }
-
-  siguienteFrasePersonaje(bloque: Bloque): void {
-    const frases = this.frasesPersonaje(bloque);
-    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
-    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
-    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
-  }
-
-  // --- Pegar / arrastrar contenido directamente sobre el módulo ---
-
-  onDragOverZona(evento: DragEvent, moduloId: number): void {
-    evento.preventDefault();
-    this.dragOverModuloId.set(moduloId);
-  }
-
-  onDragLeaveZona(moduloId: number): void {
-    if (this.dragOverModuloId() === moduloId) {
-      this.dragOverModuloId.set(null);
-    }
-  }
-
-  onDropZona(evento: DragEvent, moduloId: number): void {
-    evento.preventDefault();
-    this.dragOverModuloId.set(null);
-    const archivo = evento.dataTransfer?.files?.[0];
-    if (!archivo) {
-      return;
-    }
-    const tipo = archivo.type.startsWith('image/') ? 'IMAGEN' : 'ARCHIVO';
-    this.subirArchivoAModulo(moduloId, tipo, archivo);
-  }
-
-  onPasteZona(evento: ClipboardEvent, moduloId: number): void {
-    const target = evento.target as HTMLElement;
-    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-      return;
-    }
-
-    const items = evento.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        const it = items[i];
-        if (it.kind === 'file' && it.type.startsWith('image/')) {
-          evento.preventDefault();
-          const archivo = it.getAsFile();
-          if (archivo) {
-            this.subirArchivoAModulo(moduloId, 'IMAGEN', archivo);
-          }
-          return;
+    obs.subscribe({
+      next: (pagina) => {
+        this.guardandoPagina.set(false);
+        this.paginaModalAbierto.set(false);
+        if (editando) {
+          this.actualizarPaginasDelModulo(moduloId, (lista) => lista.map((p) => (p.id === pagina.id ? pagina : p)));
+        } else {
+          // Recién creada está vacía: se abre directo para empezar a llenarla.
+          this.router.navigate(['/profesor/cursos', this.cursoId, 'paginas', pagina.id]);
         }
-      }
-    }
-
-    const texto = evento.clipboardData?.getData('text/plain')?.trim();
-    if (texto) {
-      evento.preventDefault();
-      const esYoutube = /youtu\.?be/i.test(texto);
-      if (esYoutube) {
-        this.crearVideoRapido(moduloId, texto);
-      } else {
-        this.crearTextoRapido(moduloId, texto);
-      }
-    }
-  }
-
-  verBloque(bloque: Bloque): void {
-    this.error.set('');
-    this.bloqueService.obtenerUrl(bloque.id).subscribe({
-      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
-      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
-    });
-  }
-
-  abrirEditarBloqueTexto(bloque: Bloque): void {
-    this.bloqueEditandoId.set(bloque.id);
-    this.textoEditandoValor.set(bloque.texto ?? '');
-  }
-
-  cancelarEditarBloqueTexto(): void {
-    this.bloqueEditandoId.set(null);
-  }
-
-  guardarEdicionBloqueTexto(moduloId: number): void {
-    const id = this.bloqueEditandoId();
-    const texto = this.textoEditandoValor().trim();
-    if (id == null || !texto) {
-      return;
-    }
-    this.guardandoBloque.set(true);
-    this.error.set('');
-    this.bloqueService.actualizarTexto(id, texto).subscribe({
-      next: (actualizado) => {
-        this.guardandoBloque.set(false);
-        this.bloqueEditandoId.set(null);
-        const item = this.modulos().find((m) => m.modulo.id === moduloId);
-        this.actualizarBloquesDelModulo(
-          moduloId,
-          (item?.bloques ?? []).map((b) => (b.id === actualizado.id ? actualizado : b)),
-        );
       },
       error: (err: HttpErrorResponse) => {
-        this.guardandoBloque.set(false);
-        this.error.set(extraerMensajeError(err));
+        this.guardandoPagina.set(false);
+        this.errorPagina.set(extraerErroresPorCampo(err)?.['titulo'] ?? extraerMensajeError(err));
       },
     });
   }
 
-  pedirEliminarBloque(bloque: Bloque): void {
-    this.bloqueAEliminar.set(bloque);
-    this.confirmEliminarBloqueAbierto.set(true);
+  pedirEliminarPagina(pagina: PaginaModulo): void {
+    this.paginaAEliminar.set(pagina);
   }
 
-  confirmarEliminarBloque(): void {
-    const bloque = this.bloqueAEliminar();
-    if (!bloque) {
+  confirmarEliminarPagina(): void {
+    const pagina = this.paginaAEliminar();
+    if (!pagina) {
       return;
     }
-    this.eliminandoBloque.set(true);
-    this.bloqueService.eliminar(bloque.id).subscribe({
+    this.eliminandoPagina.set(true);
+    this.error.set('');
+    this.paginaModuloService.eliminar(pagina.id).subscribe({
       next: () => {
-        this.eliminandoBloque.set(false);
-        this.confirmEliminarBloqueAbierto.set(false);
-        const item = this.modulos().find((m) => m.modulo.id === bloque.moduloId);
-        this.actualizarBloquesDelModulo(
-          bloque.moduloId,
-          (item?.bloques ?? []).filter((b) => b.id !== bloque.id),
-        );
+        this.eliminandoPagina.set(false);
+        this.paginaAEliminar.set(null);
+        this.actualizarPaginasDelModulo(pagina.moduloId, (lista) => lista.filter((p) => p.id !== pagina.id));
       },
       error: (err: HttpErrorResponse) => {
-        this.eliminandoBloque.set(false);
-        this.confirmEliminarBloqueAbierto.set(false);
+        this.eliminandoPagina.set(false);
+        this.paginaAEliminar.set(null);
         this.error.set(extraerMensajeError(err));
       },
     });
   }
 
-  arrastrarInicio(moduloId: number, bloqueId: number): void {
-    this.arrastrando = { moduloId, bloqueId };
-  }
-
-  permitirSoltar(evento: DragEvent): void {
-    evento.preventDefault();
-  }
-
-  soltarSobre(moduloId: number, bloqueDestinoId: number): void {
-    if (!this.arrastrando || this.arrastrando.moduloId !== moduloId || this.arrastrando.bloqueId === bloqueDestinoId) {
-      this.arrastrando = null;
+  // Optimista con botones ↑/↓: se muestra al instante y se revierte si el backend falla.
+  moverPagina(item: ModuloConContenidos, indice: number, delta: -1 | 1): void {
+    const anterior = item.paginas;
+    const nueva = moverElemento(anterior, indice, indice + delta);
+    if (nueva.every((p, i) => p.id === anterior[i].id)) {
       return;
     }
-    const item = this.modulos().find((m) => m.modulo.id === moduloId);
-    if (!item) {
-      this.arrastrando = null;
-      return;
-    }
-
-    const bloques = [...item.bloques];
-    const origenIdx = bloques.findIndex((b) => b.id === this.arrastrando!.bloqueId);
-    const destinoIdx = bloques.findIndex((b) => b.id === bloqueDestinoId);
-    if (origenIdx === -1 || destinoIdx === -1) {
-      this.arrastrando = null;
-      return;
-    }
-
-    const [movido] = bloques.splice(origenIdx, 1);
-    bloques.splice(destinoIdx, 0, movido);
-    this.arrastrando = null;
-
-    this.actualizarBloquesDelModulo(moduloId, bloques);
-    this.bloqueService.reordenar(moduloId, bloques.map((b) => b.id)).subscribe({
+    const moduloId = item.modulo.id;
+    this.error.set('');
+    this.actualizarPaginasDelModulo(moduloId, () => nueva);
+    this.paginaModuloService.reordenar(moduloId, nueva.map((p) => p.id)).subscribe({
+      next: () => {},
       error: (err: HttpErrorResponse) => {
+        this.actualizarPaginasDelModulo(moduloId, () => anterior);
         this.error.set(extraerMensajeError(err));
-        this.cargar();
       },
     });
+  }
+
+  private actualizarPaginasDelModulo(moduloId: number, cambio: (paginas: PaginaModulo[]) => PaginaModulo[]): void {
+    this.modulos.update((lista) =>
+      lista.map((item) => (item.modulo.id === moduloId ? { ...item, paginas: cambio(item.paginas) } : item)),
+    );
   }
 }

@@ -7,33 +7,49 @@
       <button type="button" class="nav-close" (click)="toggleNav()" aria-label="Cerrar navegación">✕</button>
     </div>
 
-    <div class="nav-section" *ngFor="let item of modulos()">
-      <button
-        type="button"
-        class="nav-section-toggle"
-        (click)="toggleModuloNav(item.modulo.id)"
-        [attr.aria-expanded]="!moduloColapsado(item.modulo.id)"
-      >
-        <span class="nav-chevron" [class.collapsed]="moduloColapsado(item.modulo.id)" aria-hidden="true">▾</span>
-        <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id" (click)="$event.stopPropagation()">
-          {{ item.modulo.titulo }}
-        </a>
-      </button>
-
-      <ng-container *ngIf="!moduloColapsado(item.modulo.id)">
-        <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
-          {{ contenido.nombre }}
-        </button>
+    <ng-template navModulo #navModulo let-item let-esHijo="esHijo">
+      <div class="nav-section" [class.nav-sub]="esHijo">
         <button
           type="button"
-          class="nav-item"
-          *ngFor="let pagina of item.paginas"
-          (click)="abrirPagina(item.modulo.id, pagina.id, item.modulo.titulo)"
+          class="nav-section-toggle"
+          (click)="toggleModuloNav(item.modulo.id)"
+          [attr.aria-expanded]="!moduloColapsado(item.modulo.id)"
         >
-          📄 {{ pagina.nombre }}
+          <span class="nav-chevron" [class.collapsed]="moduloColapsado(item.modulo.id)" aria-hidden="true">▾</span>
+          <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id" (click)="$event.stopPropagation()">
+            {{ item.modulo.titulo }}
+          </a>
         </button>
+  
+        <ng-container *ngIf="!moduloColapsado(item.modulo.id)">
+          <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
+            {{ contenido.nombre }}
+          </button>
+          <a
+            class="nav-item"
+            *ngFor="let pagina of item.paginas"
+            [routerLink]="['/profesor/cursos', cursoId, 'paginas', pagina.id]"
+          >
+            📄 {{ pagina.titulo }}
+          </a>
+          <button
+            type="button"
+            class="nav-item"
+            *ngFor="let hoja of item.hojas"
+            (click)="abrirHoja(item.modulo.id, hoja.id, item.modulo.titulo)"
+          >
+            🎨 {{ hoja.nombre }}
+          </button>
+        </ng-container>
+      </div>
+    </ng-template>
+
+    <ng-container *ngFor="let rama of arbol()">
+      <ng-container *ngTemplateOutlet="navModulo; context: { $implicit: rama.item, esHijo: false }"></ng-container>
+      <ng-container *ngFor="let hijo of rama.hijos">
+        <ng-container *ngTemplateOutlet="navModulo; context: { $implicit: hijo, esHijo: true }"></ng-container>
       </ng-container>
-    </div>
+    </ng-container>
   </nav>
 
   <button
@@ -94,263 +110,261 @@
         Este curso todavía no tiene módulos.
       </div>
 
-      <div class="modulo-card" *ngFor="let item of modulos()" [id]="'modulo-' + item.modulo.id">
-        <div class="modulo-header">
-          <span class="modulo-orden">Módulo {{ item.modulo.orden }}</span>
-          <h2>{{ item.modulo.titulo }}</h2>
-          <div class="modulo-header-actions">
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarModulo(item.modulo)">
-              Editar
-            </ui-button>
-            <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarModulo(item.modulo)">
-              Eliminar
-            </ui-button>
+      <ng-template tarjetaModulo #tarjetaModulo let-item let-indice="indice" let-total="total" let-esHijo="esHijo">
+        <div
+          class="modulo-card"
+          [class.modulo-hijo]="esHijo"
+          [class.arrastrando]="moduloArrastrado() === item.modulo.id"
+          [id]="'modulo-' + item.modulo.id"
+        >
+          <div
+            class="modulo-header"
+            draggable="true"
+            [class.drop-activo]="destinoResaltado() === 'antes-' + item.modulo.id"
+            (dragstart)="inicioArrastreModulo($event, item.modulo.id)"
+            (dragend)="finArrastreModulo()"
+            (dragover)="sobreDestino($event, 'antes-' + item.modulo.id)"
+            (dragleave)="salirDeDestino('antes-' + item.modulo.id)"
+            (drop)="soltarAntesDe($event, item.modulo)"
+          >
+            <span class="modulo-handle" title="Arrastra para mover el módulo" aria-hidden="true">⠿</span>
+            <span class="modulo-orden">{{ esHijo ? 'Submódulo' : 'Módulo' }} {{ indice + 1 }}</span>
+            <h2>{{ item.modulo.titulo }}</h2>
+            <div class="modulo-header-actions">
+              <button
+                type="button"
+                class="icono-btn"
+                [attr.aria-label]="'Subir el módulo ' + item.modulo.titulo"
+                [disabled]="indice === 0 || moviendoModulo()"
+                (click)="moverEntreHermanos(item.modulo, indice, -1)"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="icono-btn"
+                [attr.aria-label]="'Bajar el módulo ' + item.modulo.titulo"
+                [disabled]="indice === total - 1 || moviendoModulo()"
+                (click)="moverEntreHermanos(item.modulo, indice, 1)"
+              >
+                ↓
+              </button>
+              <button *ngIf="!esHijo" type="button" class="accion-btn" (click)="abrirCrearModulo(item.modulo.id)">
+                + Submódulo
+              </button>
+              <button type="button" class="accion-btn" (click)="abrirEditarModulo(item.modulo)">Editar</button>
+              <button type="button" class="accion-btn peligro" (click)="pedirEliminarModulo(item.modulo)">Eliminar</button>
+            </div>
           </div>
+
+            <app-bloques-editor
+              [contenedor]="{ tipo: 'modulo', id: item.modulo.id }"
+              [bloques]="item.bloques"
+              (bloquesChange)="actualizarBloquesDelModulo(item.modulo.id, $event)"
+            ></app-bloques-editor>
+    
+            <p *ngIf="moduloVacio(item)" class="empty-contenidos">
+              Este módulo todavía está vacío. Agrega el primer recurso o actividad con el botón de abajo.
+            </p>
+    
+            <div class="actividades-section" *ngIf="item.paginas.length > 0 || item.paginasError">
+              <div class="actividades-header">
+                <h3>Páginas</h3>
+              </div>
+    
+              <p *ngIf="item.paginasError" class="empty-contenidos empty-contenidos-error">
+                No se pudieron cargar las páginas de este módulo — intenta recargar la página.
+              </p>
+    
+              <ul class="actividades-list" *ngIf="item.paginas.length > 0">
+                <li *ngFor="let pagina of item.paginas; let i = index; let primero = first; let ultimo = last">
+                  <div class="actividad-info">
+                    <a class="actividad-titulo pagina-link" [routerLink]="['/profesor/cursos', cursoId, 'paginas', pagina.id]">
+                      <span aria-hidden="true">📄</span> {{ pagina.titulo }}
+                    </a>
+                  </div>
+                  <div class="actividad-actions">
+                    <button
+                      type="button"
+                      class="icono-btn"
+                      [attr.aria-label]="'Subir la página ' + pagina.titulo"
+                      [disabled]="primero"
+                      (click)="moverPagina(item, i, -1)"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      class="icono-btn"
+                      [attr.aria-label]="'Bajar la página ' + pagina.titulo"
+                      [disabled]="ultimo"
+                      (click)="moverPagina(item, i, 1)"
+                    >
+                      ↓
+                    </button>
+                    <button type="button" class="accion-btn" (click)="abrirRenombrarPagina(pagina)">Renombrar</button>
+                    <button type="button" class="accion-btn peligro" (click)="pedirEliminarPagina(pagina)">Eliminar</button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+    
+            <ul class="contenidos-list" *ngIf="item.contenidos.length > 0">
+              <li *ngFor="let contenido of item.contenidos">
+                <div class="contenido-info">
+                  <span class="contenido-nombre">{{ contenido.nombre }}</span>
+                  <span class="contenido-meta">
+                    {{ tipoLabels[contenido.tipo] }} · {{ formatearFecha(contenido.fechaSubida) }}
+                    <span class="badge" [class.badge-on]="contenido.visible">
+                      {{ contenido.visible ? 'Visible' : 'Oculto' }}
+                    </span>
+                  </span>
+                </div>
+                <div class="contenido-actions">
+                  <ui-button variant="secondary" [fullWidth]="false" (pressed)="ver(contenido)">Ver</ui-button>
+                  <ui-button variant="secondary" [fullWidth]="false" (pressed)="toggleVisibilidad(contenido)">
+                    {{ contenido.visible ? 'Ocultar' : 'Mostrar' }}
+                  </ui-button>
+                </div>
+              </li>
+            </ul>
+    
+            <div class="actividades-section" *ngIf="item.actividades.length > 0">
+              <div class="actividades-header">
+                <h3>Actividades</h3>
+              </div>
+    
+              <ul class="actividades-list">
+                <li *ngFor="let act of item.actividades">
+                  <div class="actividad-info">
+                    <span class="actividad-titulo">{{ act.titulo }}</span>
+                    <span class="actividad-meta">
+                      {{ act.puntajeMaximo }} pts
+                      <ng-container *ngIf="act.fechaEntrega"> · Entrega: {{ formatearFecha(act.fechaEntrega) }}</ng-container>
+                    </span>
+                  </div>
+                  <div class="actividad-actions">
+                    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEntregas(act)">
+                      Ver entregas
+                    </ui-button>
+                    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarActividad(act)">
+                      Editar
+                    </ui-button>
+                    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarActividad(act)">
+                      Eliminar
+                    </ui-button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+    
+            <div class="cuestionarios-section" *ngIf="item.cuestionarios.length > 0 || item.cuestionariosError">
+              <div class="cuestionarios-header">
+                <h3>Cuestionarios</h3>
+              </div>
+    
+              <p *ngIf="item.cuestionariosError" class="empty-contenidos empty-contenidos-error">
+                No se pudieron cargar los cuestionarios de este módulo — intenta recargar la página.
+              </p>
+    
+              <ul class="cuestionarios-list" *ngIf="item.cuestionarios.length > 0">
+                <li *ngFor="let cq of item.cuestionarios">
+                  <div class="cuestionario-info">
+                    <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
+                    <span class="cuestionario-meta">
+                      {{ cq.puntajeMaximo }} pts
+                      <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
+                      <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
+                      <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
+                    </span>
+                  </div>
+                  <div class="cuestionario-actions">
+                    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditorCuestionario(cq)">
+                      Preguntas y resultados
+                    </ui-button>
+                    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarCuestionario(cq)">
+                      Editar
+                    </ui-button>
+                    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarCuestionario(cq)">
+                      Eliminar
+                    </ui-button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+    
+            <div class="contenido-personalizable-section" *ngIf="item.hojas.length > 0">
+              <div class="contenido-personalizable-header">
+                <h3>Contenido personalizable</h3>
+                <ui-button
+                  variant="secondary"
+                  [fullWidth]="false"
+                  (pressed)="abrirLienzo(item.modulo.id, item.modulo.titulo)"
+                >
+                  Abrir editor
+                </ui-button>
+              </div>
+              <p class="empty-contenidos">
+                {{ item.hojas.length }} {{ item.hojas.length === 1 ? 'hoja' : 'hojas' }} de diseño libre.
+              </p>
+            </div>
+    
+            <button type="button" class="agregar-recurso-btn" (click)="abrirSelectorRecurso(item.modulo)">
+              <span aria-hidden="true">+</span> Agregar actividad o recurso
+            </button>
         </div>
+      </ng-template>
+
+      <ng-container *ngFor="let rama of arbol(); let ri = index">
+        <ng-container
+          *ngTemplateOutlet="tarjetaModulo; context: { $implicit: rama.item, indice: ri, total: arbol().length, esHijo: false }"
+        ></ng-container>
 
         <div
-          class="bloques-editor"
-          tabindex="0"
-          [class.drop-active]="dragOverModuloId() === item.modulo.id"
-          (paste)="onPasteZona($event, item.modulo.id)"
-          (dragover)="onDragOverZona($event, item.modulo.id)"
-          (dragleave)="onDragLeaveZona(item.modulo.id)"
-          (drop)="onDropZona($event, item.modulo.id)"
+          class="submodulos"
+          *ngIf="rama.hijos.length > 0 || (moduloArrastrado() !== null && moduloArrastrado() !== rama.item.modulo.id)"
         >
-          <p class="dropzone-hint">
-            Haz clic aquí y pega (Ctrl+V) texto o una imagen, o arrastra un archivo — se agrega solo.
-          </p>
+          <button
+            *ngIf="rama.hijos.length > 0"
+            type="button"
+            class="submodulos-toggle"
+            [attr.aria-expanded]="!raicesColapsadas().has(rama.item.modulo.id)"
+            (click)="toggleSubmodulos(rama.item.modulo.id)"
+          >
+            <span class="nav-chevron" [class.collapsed]="raicesColapsadas().has(rama.item.modulo.id)" aria-hidden="true">▾</span>
+            {{ rama.hijos.length }} {{ rama.hijos.length === 1 ? 'submódulo' : 'submódulos' }} de «{{ rama.item.modulo.titulo }}»
+          </button>
 
-          <ul class="bloques-list" *ngIf="item.bloques.length > 0">
-            <li
-              *ngFor="let bloque of item.bloques"
-              draggable="true"
-              (dragstart)="arrastrarInicio(item.modulo.id, bloque.id)"
-              (dragover)="permitirSoltar($event)"
-              (drop)="soltarSobre(item.modulo.id, bloque.id)"
-            >
-              <span class="bloque-handle" title="Arrastra para reordenar">⠿</span>
+          <ng-container *ngIf="!raicesColapsadas().has(rama.item.modulo.id)">
+            <ng-container *ngFor="let hijo of rama.hijos; let hi = index">
+              <ng-container
+                *ngTemplateOutlet="tarjetaModulo; context: { $implicit: hijo, indice: hi, total: rama.hijos.length, esHijo: true }"
+              ></ng-container>
+            </ng-container>
+          </ng-container>
 
-              <div class="bloque-cuerpo">
-                <ng-container [ngSwitch]="bloque.tipo">
-                  <div *ngSwitchCase="'TEXTO'" class="bloque-texto">
-                    <ng-container *ngIf="bloqueEditandoId() !== bloque.id; else editandoTexto">
-                      <p>{{ bloque.texto }}</p>
-                    </ng-container>
-                    <ng-template #editandoTexto>
-                      <textarea
-                        class="bloque-textarea"
-                        rows="3"
-                        [value]="textoEditandoValor()"
-                        (input)="textoEditandoValor.set($any($event.target).value)"
-                      ></textarea>
-                      <div class="bloque-edit-actions">
-                        <button type="button" class="cancel-btn" (click)="cancelarEditarBloqueTexto()">Cancelar</button>
-                        <ui-button
-                          [fullWidth]="false"
-                          [loading]="guardandoBloque()"
-                          (pressed)="guardarEdicionBloqueTexto(item.modulo.id)"
-                        >
-                          Guardar
-                        </ui-button>
-                      </div>
-                    </ng-template>
-                  </div>
-
-                  <div *ngSwitchCase="'IMAGEN'" class="bloque-imagen">
-                    <span class="bloque-archivo-nombre">🖼️ {{ bloque.nombreArchivo }}</span>
-                  </div>
-
-                  <div *ngSwitchCase="'ARCHIVO'" class="bloque-archivo">
-                    <span class="bloque-archivo-nombre">📎 {{ bloque.nombreArchivo }}</span>
-                  </div>
-
-                  <div *ngSwitchCase="'VIDEO'" class="bloque-video">
-                    <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
-                  </div>
-
-                  <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
-                    <img
-                      *ngIf="personajeImagenUrls()[bloque.id] as url"
-                      [src]="url"
-                      [alt]="bloque.nombreArchivo ?? 'Personaje'"
-                      class="personaje-imagen"
-                    />
-                    <ng-container *ngIf="bloqueEditandoId() !== bloque.id; else editandoPersonajeTexto">
-                      <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
-                        {{ fraseActualPersonaje(bloque) }}
-                        <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
-                          {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
-                        </span>
-                      </button>
-                    </ng-container>
-                    <ng-template #editandoPersonajeTexto>
-                      <textarea
-                        class="bloque-textarea"
-                        rows="4"
-                        placeholder="Una frase por línea…"
-                        [value]="textoEditandoValor()"
-                        (input)="textoEditandoValor.set($any($event.target).value)"
-                      ></textarea>
-                      <div class="bloque-edit-actions">
-                        <button type="button" class="cancel-btn" (click)="cancelarEditarBloqueTexto()">Cancelar</button>
-                        <ui-button
-                          [fullWidth]="false"
-                          [loading]="guardandoBloque()"
-                          (pressed)="guardarEdicionBloqueTexto(item.modulo.id)"
-                        >
-                          Guardar
-                        </ui-button>
-                      </div>
-                    </ng-template>
-                  </div>
-                </ng-container>
-              </div>
-
-              <div class="bloque-actions">
-                <ui-button
-                  *ngIf="bloque.tipo === 'IMAGEN' || bloque.tipo === 'ARCHIVO'"
-                  variant="secondary"
-                  [fullWidth]="false"
-                  (pressed)="verBloque(bloque)"
-                >
-                  Ver
-                </ui-button>
-                <ui-button
-                  *ngIf="(bloque.tipo === 'TEXTO' || bloque.tipo === 'PERSONAJE') && bloqueEditandoId() !== bloque.id"
-                  variant="secondary"
-                  [fullWidth]="false"
-                  (pressed)="abrirEditarBloqueTexto(bloque)"
-                >
-                  Editar
-                </ui-button>
-                <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarBloque(bloque)">
-                  Eliminar
-                </ui-button>
-              </div>
-            </li>
-          </ul>
-
-          <div class="bloques-toolbar">
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirAgregarBloque(item.modulo.id)">
-              + Agregar contenido
-            </ui-button>
-            <span *ngIf="subiendoArchivoBloque() === item.modulo.id" class="subiendo-msg">Subiendo…</span>
+          <div
+            class="drop-zona"
+            *ngIf="moduloArrastrado() !== null && moduloArrastrado() !== rama.item.modulo.id"
+            [class.drop-activo]="destinoResaltado() === 'dentro-' + rama.item.modulo.id"
+            (dragover)="sobreDestino($event, 'dentro-' + rama.item.modulo.id)"
+            (dragleave)="salirDeDestino('dentro-' + rama.item.modulo.id)"
+            (drop)="soltarAlFinal($event, rama.item.modulo.id)"
+          >
+            Suelta aquí para moverlo dentro de «{{ rama.item.modulo.titulo }}»
           </div>
         </div>
+      </ng-container>
 
-        <p *ngIf="item.contenidos.length === 0" class="empty-contenidos">Sin contenidos todavía.</p>
-
-        <ul class="contenidos-list" *ngIf="item.contenidos.length > 0">
-          <li *ngFor="let contenido of item.contenidos">
-            <div class="contenido-info">
-              <span class="contenido-nombre">{{ contenido.nombre }}</span>
-              <span class="contenido-meta">
-                {{ tipoLabels[contenido.tipo] }} · {{ formatearFecha(contenido.fechaSubida) }}
-                <span class="badge" [class.badge-on]="contenido.visible">
-                  {{ contenido.visible ? 'Visible' : 'Oculto' }}
-                </span>
-              </span>
-            </div>
-            <div class="contenido-actions">
-              <ui-button variant="secondary" [fullWidth]="false" (pressed)="ver(contenido)">Ver</ui-button>
-              <ui-button variant="secondary" [fullWidth]="false" (pressed)="toggleVisibilidad(contenido)">
-                {{ contenido.visible ? 'Ocultar' : 'Mostrar' }}
-              </ui-button>
-            </div>
-          </li>
-        </ul>
-
-        <div class="actividades-section">
-          <div class="actividades-header">
-            <h3>Actividades</h3>
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCrearActividad(item.modulo.id)">
-              Nueva actividad
-            </ui-button>
-          </div>
-
-          <p *ngIf="item.actividades.length === 0" class="empty-contenidos">Sin actividades todavía.</p>
-
-          <ul class="actividades-list" *ngIf="item.actividades.length > 0">
-            <li *ngFor="let act of item.actividades">
-              <div class="actividad-info">
-                <span class="actividad-titulo">{{ act.titulo }}</span>
-                <span class="actividad-meta">
-                  {{ act.puntajeMaximo }} pts
-                  <ng-container *ngIf="act.fechaEntrega"> · Entrega: {{ formatearFecha(act.fechaEntrega) }}</ng-container>
-                </span>
-              </div>
-              <div class="actividad-actions">
-                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEntregas(act)">
-                  Ver entregas
-                </ui-button>
-                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarActividad(act)">
-                  Editar
-                </ui-button>
-                <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarActividad(act)">
-                  Eliminar
-                </ui-button>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div class="cuestionarios-section">
-          <div class="cuestionarios-header">
-            <h3>Cuestionarios</h3>
-            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCrearCuestionario(item.modulo.id)">
-              Nuevo cuestionario
-            </ui-button>
-          </div>
-
-          <p *ngIf="item.cuestionariosError" class="empty-contenidos empty-contenidos-error">
-            No se pudieron cargar los cuestionarios de este módulo — intenta recargar la página.
-          </p>
-          <p *ngIf="!item.cuestionariosError && item.cuestionarios.length === 0" class="empty-contenidos">
-            Sin cuestionarios todavía.
-          </p>
-
-          <ul class="cuestionarios-list" *ngIf="item.cuestionarios.length > 0">
-            <li *ngFor="let cq of item.cuestionarios">
-              <div class="cuestionario-info">
-                <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
-                <span class="cuestionario-meta">
-                  {{ cq.puntajeMaximo }} pts
-                  <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
-                  <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
-                  <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
-                </span>
-              </div>
-              <div class="cuestionario-actions">
-                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditorCuestionario(cq)">
-                  Preguntas y resultados
-                </ui-button>
-                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarCuestionario(cq)">
-                  Editar
-                </ui-button>
-                <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminarCuestionario(cq)">
-                  Eliminar
-                </ui-button>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div class="contenido-personalizable-section">
-          <div class="contenido-personalizable-header">
-            <h3>Contenido personalizable</h3>
-            <ui-button
-              variant="secondary"
-              [fullWidth]="false"
-              (pressed)="abrirLienzo(item.modulo.id, item.modulo.titulo)"
-            >
-              Abrir editor
-            </ui-button>
-          </div>
-          <p class="empty-contenidos">
-            Diseña libremente con texto, imágenes, videos y personajes, en las hojas que quieras.
-          </p>
-        </div>
+      <div
+        class="drop-zona"
+        *ngIf="moduloArrastrado() !== null"
+        [class.drop-activo]="destinoResaltado() === 'raiz'"
+        (dragover)="sobreDestino($event, 'raiz')"
+        (dragleave)="salirDeDestino('raiz')"
+        (drop)="soltarAlFinal($event, null)"
+      >
+        Suelta aquí para dejarlo como módulo principal (al final)
       </div>
     </ng-container>
 
@@ -541,13 +555,20 @@
       placeholder="Ej. Módulo 1: Introducción"
     ></form-field>
 
-    <form-field
-      label="Orden"
-      inputId="modulo-orden"
-      type="number"
-      [control]="moduloForm.controls.orden"
-      errorMessage="Ingresa un orden válido"
-    ></form-field>
+    <ui-alert [message]="errorModulo()"></ui-alert>
+
+    <select-field
+      label="Módulo padre"
+      inputId="modulo-padre"
+      [control]="moduloForm.controls.moduloPadreId"
+      [options]="opcionesPadre()"
+    ></select-field>
+    <p class="campo-ayuda" *ngIf="editandoTieneHijos(); else ayudaPadre">
+      Este módulo tiene submódulos, así que solo puede ser un módulo principal.
+    </p>
+    <ng-template #ayudaPadre>
+      <p class="campo-ayuda">Elige un módulo para que este quede adentro (por ejemplo, «Semana 1» dentro de «Primer Corte»).</p>
+    </ng-template>
 
     <div class="modal-actions">
       <button type="button" class="cancel-btn" (click)="cerrarModalModulo()">Cancelar</button>
@@ -566,137 +587,49 @@
   (cancelled)="confirmEliminarModuloAbierto.set(false)"
 ></confirm-dialog>
 
-<!-- Modal: agregar bloque de contenido -->
+<app-agregar-recurso-selector
+  [open]="selectorRecursoModulo() !== null"
+  (elegido)="elegirRecurso($event)"
+  (closed)="cerrarSelectorRecurso()"
+></app-agregar-recurso-selector>
+
+<!-- Modal: crear/renombrar página -->
 <ui-modal
-  [open]="agregarBloqueModalAbierto()"
-  title="Agregar contenido"
-  (closed)="cerrarModalAgregarBloque()"
+  [open]="paginaModalAbierto()"
+  [title]="paginaEditando() ? 'Renombrar página' : 'Nueva página'"
+  (closed)="cerrarModalPagina()"
 >
-  <div class="bloque-tipo-tabs">
-    <button
-      type="button"
-      class="bloque-tipo-tab"
-      [class.active]="agregarBloqueTipo() === 'TEXTO'"
-      (click)="seleccionarTipoBloque('TEXTO')"
-    >
-      Texto
-    </button>
-    <button
-      type="button"
-      class="bloque-tipo-tab"
-      [class.active]="agregarBloqueTipo() === 'VIDEO'"
-      (click)="seleccionarTipoBloque('VIDEO')"
-    >
-      Video
-    </button>
-    <button
-      type="button"
-      class="bloque-tipo-tab"
-      [class.active]="agregarBloqueTipo() === 'IMAGEN'"
-      (click)="seleccionarTipoBloque('IMAGEN')"
-    >
-      Imagen
-    </button>
-    <button
-      type="button"
-      class="bloque-tipo-tab"
-      [class.active]="agregarBloqueTipo() === 'ARCHIVO'"
-      (click)="seleccionarTipoBloque('ARCHIVO')"
-    >
-      Archivo
-    </button>
-    <button
-      type="button"
-      class="bloque-tipo-tab"
-      [class.active]="agregarBloqueTipo() === 'PERSONAJE'"
-      (click)="seleccionarTipoBloque('PERSONAJE')"
-    >
-      Personaje
-    </button>
-  </div>
-
-  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'TEXTO'">
-    <textarea
-      rows="4"
-      placeholder="Escribe el contenido…"
-      [value]="nuevoTextoValor()"
-      (input)="nuevoTextoValor.set($any($event.target).value)"
-    ></textarea>
+  <form class="modal-form" [formGroup]="paginaForm" (ngSubmit)="guardarPagina()" novalidate>
+    <ui-alert [message]="errorPagina()"></ui-alert>
+    <form-field
+      label="Título"
+      inputId="pagina-titulo"
+      [control]="paginaForm.controls.titulo"
+      placeholder="Ej. Introducción"
+      [requerido]="true"
+      [errorMessage]="
+        paginaForm.controls.titulo.hasError('maxlength')
+          ? 'Máximo ' + paginaTituloMax + ' caracteres.'
+          : 'Escribe el título de la página.'
+      "
+    ></form-field>
     <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
-      <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoTexto()">
-        Agregar
+      <button type="button" class="cancel-btn" (click)="cerrarModalPagina()">Cancelar</button>
+      <ui-button type="submit" [fullWidth]="false" [loading]="guardandoPagina()">
+        {{ paginaEditando() ? 'Guardar' : 'Crear y abrir' }}
       </ui-button>
     </div>
-  </div>
-
-  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'VIDEO'">
-    <input
-      type="text"
-      placeholder="URL de YouTube"
-      [value]="nuevoVideoValor()"
-      (input)="nuevoVideoValor.set($any($event.target).value)"
-    />
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
-      <ui-button [fullWidth]="false" [loading]="guardandoBloque()" (pressed)="guardarNuevoVideo()">
-        Agregar
-      </ui-button>
-    </div>
-  </div>
-
-  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'IMAGEN'">
-    <label class="file-btn file-btn-block">
-      {{ subiendoArchivoBloque() ? 'Subiendo…' : 'Elegir imagen…' }}
-      <input type="file" accept="image/*" [disabled]="!!subiendoArchivoBloque()" (change)="onArchivoBloqueSeleccionado($event, 'IMAGEN')" />
-    </label>
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
-    </div>
-  </div>
-
-  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'ARCHIVO'">
-    <label class="file-btn file-btn-block">
-      {{ subiendoArchivoBloque() ? 'Subiendo…' : 'Elegir archivo…' }}
-      <input type="file" [disabled]="!!subiendoArchivoBloque()" (change)="onArchivoBloqueSeleccionado($event, 'ARCHIVO')" />
-    </label>
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
-    </div>
-  </div>
-
-  <div class="bloque-nuevo-form" *ngIf="agregarBloqueTipo() === 'PERSONAJE'">
-    <p class="personaje-ayuda">
-      Elige cualquier imagen como personaje (puede ser un dibujo, una foto, un ícono — lo que quieras) y escribe
-      lo que va a "decir", una frase por línea. El estudiante va a ir tocando la burbuja para pasar a la siguiente frase.
-    </p>
-    <label class="file-btn file-btn-block">
-      {{ nuevoPersonajeImagen()?.name ?? 'Elegir imagen del personaje…' }}
-      <input type="file" accept="image/*" (change)="onImagenPersonajeSeleccionada($event)" />
-    </label>
-    <textarea
-      rows="4"
-      placeholder="Hola, soy tu guía en este módulo…&#10;Hoy vamos a hablar de…&#10;¡Empecemos!"
-      [value]="nuevoPersonajeTexto()"
-      (input)="nuevoPersonajeTexto.set($any($event.target).value)"
-    ></textarea>
-    <div class="modal-actions">
-      <button type="button" class="cancel-btn" (click)="cerrarModalAgregarBloque()">Cancelar</button>
-      <ui-button [fullWidth]="false" [loading]="guardandoPersonaje()" (pressed)="guardarNuevoPersonaje()">
-        Agregar
-      </ui-button>
-    </div>
-  </div>
+  </form>
 </ui-modal>
 
 <confirm-dialog
-  [open]="confirmEliminarBloqueAbierto()"
-  title="Eliminar bloque"
-  message="¿Seguro que quieres eliminar este bloque de contenido?"
+  [open]="paginaAEliminar() !== null"
+  title="Eliminar página"
+  [message]="'¿Seguro que quieres eliminar la página \'' + (paginaAEliminar()?.titulo ?? '') + '\'? Se borra también todo su contenido.'"
   confirmLabel="Eliminar"
-  [loading]="eliminandoBloque()"
-  (confirmed)="confirmarEliminarBloque()"
-  (cancelled)="confirmEliminarBloqueAbierto.set(false)"
+  [loading]="eliminandoPagina()"
+  (confirmed)="confirmarEliminarPagina()"
+  (cancelled)="paginaAEliminar.set(null)"
 ></confirm-dialog>
 
 <app-lienzo

@@ -7,33 +7,52 @@
       <button type="button" class="nav-close" (click)="toggleNav()" aria-label="Cerrar navegación">✕</button>
     </div>
 
-    <div class="nav-section" *ngFor="let item of modulos()">
-      <button
-        type="button"
-        class="nav-section-toggle"
-        (click)="toggleModuloNav(item.modulo.id)"
-        [attr.aria-expanded]="!moduloColapsado(item.modulo.id)"
-      >
-        <span class="nav-chevron" [class.collapsed]="moduloColapsado(item.modulo.id)" aria-hidden="true">▾</span>
-        <a class="nav-section-title" [href]="'#modulo-' + item.modulo.id" (click)="$event.stopPropagation()">
-          {{ item.modulo.titulo }}
-        </a>
-      </button>
+    <ng-template navModulo #navModulo let-item let-esHijo="esHijo">
+      <div class="nav-section" [class.nav-sub]="esHijo">
+        <div class="nav-section-toggle" [class.nav-activo]="moduloSeleccionadoId() === item.modulo.id">
+          <button
+            type="button"
+            class="nav-chevron-btn"
+            (click)="toggleModuloNav(item.modulo.id)"
+            [attr.aria-expanded]="!moduloColapsado(item.modulo.id)"
+            [attr.aria-label]="(moduloColapsado(item.modulo.id) ? 'Mostrar' : 'Ocultar') + ' el contenido de ' + item.modulo.titulo"
+          >
+            <span class="nav-chevron" [class.collapsed]="moduloColapsado(item.modulo.id)" aria-hidden="true">▾</span>
+          </button>
+          <button type="button" class="nav-section-title" (click)="seleccionarModulo(item.modulo.id)">
+            {{ item.modulo.titulo }}
+          </button>
+        </div>
 
-      <ng-container *ngIf="!moduloColapsado(item.modulo.id)">
-        <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
-          {{ contenido.nombre }}
-        </button>
-        <button
-          type="button"
-          class="nav-item"
-          *ngFor="let pagina of item.paginas"
-          (click)="abrirPagina(item.modulo.id, pagina.id, item.modulo.titulo)"
-        >
-          📄 {{ pagina.nombre }}
-        </button>
+        <ng-container *ngIf="!moduloColapsado(item.modulo.id)">
+          <button type="button" class="nav-item" *ngFor="let contenido of item.contenidos" (click)="ver(contenido)">
+            {{ contenido.nombre }}
+          </button>
+          <a
+            class="nav-item"
+            *ngFor="let pagina of item.paginas"
+            [routerLink]="['/estudiante/cursos', cursoId, 'paginas', pagina.id]"
+          >
+            📄 {{ pagina.titulo }}
+          </a>
+          <button
+            type="button"
+            class="nav-item"
+            *ngFor="let hoja of item.hojas"
+            (click)="abrirHoja(item.modulo.id, hoja.id, item.modulo.titulo)"
+          >
+            🎨 {{ hoja.nombre }}
+          </button>
+        </ng-container>
+      </div>
+    </ng-template>
+
+    <ng-container *ngFor="let rama of arbol()">
+      <ng-container *ngTemplateOutlet="navModulo; context: { $implicit: rama.item, esHijo: false }"></ng-container>
+      <ng-container *ngFor="let hijo of rama.hijos">
+        <ng-container *ngTemplateOutlet="navModulo; context: { $implicit: hijo, esHijo: true }"></ng-container>
       </ng-container>
-    </div>
+    </ng-container>
   </nav>
 
   <button
@@ -55,14 +74,6 @@
     <ng-container *ngIf="curso() as c">
       <div class="page-header">
         <h1>{{ c.titulo }}</h1>
-        <p class="subtitle">{{ c.descripcion || 'Sin descripción.' }}</p>
-        <curso-datos
-          class="datos-curso"
-          [codigo]="c.codigo"
-          [periodo]="c.periodo"
-          [fechaInicio]="c.fechaInicio"
-          [fechaFin]="c.fechaFin"
-        ></curso-datos>
       </div>
 
       <div class="tabs">
@@ -85,52 +96,45 @@
         Este curso todavía no tiene módulos disponibles.
       </div>
 
-      <div class="modulo-card" *ngFor="let item of modulos()" [id]="'modulo-' + item.modulo.id">
+      <app-modulo-pestanas
+        *ngIf="modulos().length > 0"
+        [ramas]="ramasPestanas()"
+        [seleccionadoId]="moduloSeleccionadoId()"
+        (seleccionar)="seleccionarModulo($event)"
+      ></app-modulo-pestanas>
+
+      <app-curso-presentacion
+        *ngIf="enPrimeraPestana() && curso() as c"
+        class="presentacion-curso"
+        [curso]="c"
+      ></app-curso-presentacion>
+
+      <div class="modulo-card" *ngIf="moduloVisible() as item" [id]="'modulo-' + item.modulo.id">
         <div class="modulo-header">
-          <span class="modulo-orden">Módulo {{ item.modulo.orden }}</span>
           <h2>{{ item.modulo.titulo }}</h2>
         </div>
 
         <ul class="bloques-list" *ngIf="item.bloques.length > 0">
           <li *ngFor="let bloque of item.bloques">
-            <ng-container [ngSwitch]="bloque.tipo">
-              <p *ngSwitchCase="'TEXTO'" class="bloque-texto">{{ bloque.texto }}</p>
-
-              <div *ngSwitchCase="'IMAGEN'" class="bloque-imagen">
-                <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
-                  🖼️ {{ bloque.nombreArchivo }}
-                </button>
-              </div>
-
-              <div *ngSwitchCase="'ARCHIVO'" class="bloque-archivo">
-                <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
-                  📎 {{ bloque.nombreArchivo }}
-                </button>
-              </div>
-
-              <div *ngSwitchCase="'VIDEO'" class="bloque-video">
-                <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
-              </div>
-
-              <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
-                <img
-                  *ngIf="personajeImagenUrls()[bloque.id] as url"
-                  [src]="url"
-                  [alt]="bloque.nombreArchivo ?? 'Personaje'"
-                  class="personaje-imagen"
-                />
-                <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
-                  {{ fraseActualPersonaje(bloque) }}
-                  <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
-                    {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
-                  </span>
-                </button>
-              </div>
-            </ng-container>
+            <app-bloque-vista [bloque]="bloque"></app-bloque-vista>
           </li>
         </ul>
 
-        <p *ngIf="item.contenidos.length === 0" class="empty-contenidos">Sin contenidos disponibles todavía.</p>
+        <div class="paginas-section" *ngIf="item.paginas.length > 0 || item.paginasError">
+          <h3>Páginas</h3>
+          <p *ngIf="item.paginasError" class="empty-contenidos empty-contenidos-error">
+            No se pudieron cargar las páginas de este módulo — intenta recargar la página.
+          </p>
+          <ul class="paginas-list" *ngIf="item.paginas.length > 0">
+            <li *ngFor="let pagina of item.paginas">
+              <a class="pagina-link" [routerLink]="['/estudiante/cursos', cursoId, 'paginas', pagina.id]">
+                <span aria-hidden="true">📄</span> {{ pagina.titulo }}
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <p *ngIf="moduloVacio(item)" class="empty-contenidos">Este módulo todavía no tiene contenido.</p>
 
         <ul class="contenidos-list" *ngIf="item.contenidos.length > 0">
           <li *ngFor="let contenido of item.contenidos">
@@ -199,25 +203,33 @@
 
           <ul class="cuestionarios-list" *ngIf="!item.cuestionariosError">
             <li *ngFor="let cq of item.cuestionarios">
-              <div class="cuestionario-info">
-                <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
-                <p class="cuestionario-descripcion" *ngIf="cq.descripcion">{{ cq.descripcion }}</p>
-                <span class="cuestionario-meta">
-                  {{ cq.puntajeMaximo }} pts
-                  <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
-                  <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
-                  <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
-                  <span *ngIf="cq.disponible === false" class="badge">No disponible</span>
-                </span>
-              </div>
-              <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">
-                Abrir
-              </ui-button>
+              <ng-container *ngIf="estadoCuestionario(cq) as estado">
+                <div class="cuestionario-info">
+                  <span class="cuestionario-titulo">📝 {{ cq.titulo }}</span>
+                  <p class="cuestionario-descripcion" *ngIf="cq.descripcion">{{ cq.descripcion }}</p>
+                  <span class="cuestionario-meta">
+                    {{ cq.puntajeMaximo }} pts
+                    <ng-container *ngIf="cq.fechaApertura"> · Abre: {{ formatearFecha(cq.fechaApertura) }}</ng-container>
+                    <ng-container *ngIf="cq.fechaEntrega"> · Entrega: {{ formatearFecha(cq.fechaEntrega) }}</ng-container>
+                    <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
+                    <ng-container [ngSwitch]="estado.tipo">
+                      <span *ngSwitchCase="'respondido'" class="badge badge-on">
+                        Respondido<ng-container *ngIf="estado.tipo === 'respondido'">: {{ estado.nota }} / {{ estado.puntajeMaximo }}</ng-container>
+                      </span>
+                      <span *ngSwitchCase="'pendiente'" class="badge">Sin responder</span>
+                      <span *ngSwitchCase="'no-disponible'" class="badge">No disponible</span>
+                    </ng-container>
+                  </span>
+                </div>
+                <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">
+                  {{ estado.tipo === 'respondido' ? 'Ver revisión' : 'Abrir' }}
+                </ui-button>
+              </ng-container>
             </li>
           </ul>
         </div>
 
-        <div class="contenido-personalizable-section">
+        <div class="contenido-personalizable-section" *ngIf="item.hojas.length > 0">
           <div class="contenido-personalizable-header">
             <h3>Contenido personalizable</h3>
             <ui-button
@@ -257,4 +269,5 @@
   [cuestionarioId]="cq.id"
   [titulo]="cq.titulo"
   (cerrado)="cerrarCuestionario()"
+  (respondido)="onCuestionarioRespondido($event)"
 ></app-cuestionario-responder>

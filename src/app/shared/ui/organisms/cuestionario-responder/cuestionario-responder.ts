@@ -1,6 +1,19 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild,
+  inject,
+  signal,
+} from '@angular/core';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { CuestionarioService } from '../../../../core/services/cuestionario.service';
 import { CuestionarioDetalle, IntentoDetalle } from '../../../../core/models/cuestionario.model';
@@ -14,12 +27,19 @@ import { formatearFecha } from '../../../../core/utils/labels.util';
   templateUrl: './cuestionario-responder.html',
   styleUrl: './cuestionario-responder.scss',
 })
-export class CuestionarioResponderComponent implements OnInit {
+export class CuestionarioResponderComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input({ required: true }) cuestionarioId!: number;
   @Input() titulo = 'Cuestionario';
   @Output() cerrado = new EventEmitter<void>();
+  // Se emite al enviar las respuestas, para que la lista refleje el estado sin recargar todo.
+  @Output() respondido = new EventEmitter<IntentoDetalle>();
+
+  @ViewChild('botonCerrar') private botonCerrar?: ElementRef<HTMLButtonElement>;
 
   private readonly cuestionarioService = inject(CuestionarioService);
+  private readonly documento = inject(DOCUMENT);
+  // Elemento que abrió el overlay, para devolverle el foco al cerrarlo.
+  private readonly focoPrevio = this.documento.activeElement as HTMLElement | null;
 
   readonly formatearFecha = formatearFecha;
 
@@ -35,6 +55,23 @@ export class CuestionarioResponderComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargar();
+  }
+
+  ngAfterViewInit(): void {
+    this.botonCerrar?.nativeElement.focus();
+  }
+
+  ngOnDestroy(): void {
+    this.focoPrevio?.focus();
+  }
+
+  // Escape cierra el overlay, salvo que esté abierta la confirmación de envío.
+  @HostListener('document:keydown.escape')
+  cerrarConEscape(): void {
+    if (this.confirmEnviarAbierto()) {
+      return;
+    }
+    this.cerrar();
   }
 
   private cargar(): void {
@@ -128,6 +165,7 @@ export class CuestionarioResponderComponent implements OnInit {
         this.enviando.set(false);
         this.confirmEnviarAbierto.set(false);
         this.miIntento.set(intento);
+        this.respondido.emit(intento);
       },
       error: (err: HttpErrorResponse) => {
         this.enviando.set(false);

@@ -14,19 +14,21 @@ import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
-import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
+import { BloqueVista } from '../../../shared/ui/molecules/bloque-vista/bloque-vista';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
 import { BloqueService } from '../../../core/services/bloque.service';
 import { ActividadService } from '../../../core/services/actividad.service';
 import { CuestionarioService } from '../../../core/services/cuestionario.service';
+import { PaginaModuloService } from '../../../core/services/pagina-modulo.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido, TipoContenido } from '../../../core/models/contenido.model';
 import { Bloque } from '../../../core/models/bloque.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Cuestionario } from '../../../core/models/cuestionario.model';
+import { PaginaModulo } from '../../../core/models/pagina-modulo.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
 
@@ -45,7 +47,7 @@ import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/label
     DataTable,
     ConfirmDialog,
     LienzoComponent,
-    EmbedVideoUrlPipe,
+    BloqueVista,
   ],
   templateUrl: './modulo-detalle-page.html',
   styleUrl: './modulo-detalle-page.scss',
@@ -58,6 +60,7 @@ export class ModuloDetallePage implements OnInit {
   private readonly bloqueService = inject(BloqueService);
   private readonly actividadService = inject(ActividadService);
   private readonly cuestionarioService = inject(CuestionarioService);
+  private readonly paginaModuloService = inject(PaginaModuloService);
   private readonly fb = inject(FormBuilder);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
@@ -70,12 +73,13 @@ export class ModuloDetallePage implements OnInit {
   readonly actividades = signal<Actividad[]>([]);
   readonly cuestionarios = signal<Cuestionario[]>([]);
   readonly cuestionariosError = signal(false);
+  // Solo lectura: el admin no crea contenido en páginas (el backend responde 403).
+  readonly paginas = signal<PaginaModulo[]>([]);
+  readonly paginasError = signal(false);
   readonly cargando = signal(false);
   readonly error = signal('');
 
   readonly lienzoAbierto = signal(false);
-  readonly personajeImagenUrls = signal<Record<number, string>>({});
-  readonly personajeFraseIndice = signal<Record<number, number>>({});
   readonly formatearFecha = formatearFecha;
 
   readonly columnas: DataTableColumn<Contenido>[] = [
@@ -119,6 +123,8 @@ export class ModuloDetallePage implements OnInit {
   cargar(): void {
     this.cargando.set(true);
     this.error.set('');
+    this.cuestionariosError.set(false);
+    this.paginasError.set(false);
     forkJoin({
       curso: this.cursoService.obtener(this.cursoId),
       modulo: this.moduloService.obtener(this.moduloId),
@@ -135,16 +141,23 @@ export class ModuloDetallePage implements OnInit {
           return of([] as Cuestionario[]);
         }),
       ),
+      paginas: this.paginaModuloService.listarPorModulo(this.moduloId).pipe(
+        catchError((err: HttpErrorResponse) => {
+          console.error(`Fallo al cargar las páginas del módulo ${this.moduloId}`, err);
+          this.paginasError.set(true);
+          return of([] as PaginaModulo[]);
+        }),
+      ),
     }).subscribe({
-      next: ({ curso, modulo, contenidos, bloques, actividades, cuestionarios }) => {
+      next: ({ curso, modulo, contenidos, bloques, actividades, cuestionarios, paginas }) => {
         this.curso.set(curso);
         this.modulo.set(modulo);
         this.contenidos.set(contenidos);
         this.bloques.set(bloques);
         this.actividades.set(actividades);
         this.cuestionarios.set(cuestionarios);
+        this.paginas.set(paginas);
         this.cargando.set(false);
-        this.cargarImagenesPersonaje(bloques.filter((b) => b.tipo === 'PERSONAJE'));
       },
       error: (err: HttpErrorResponse) => {
         this.cargando.set(false);
@@ -159,47 +172,6 @@ export class ModuloDetallePage implements OnInit {
       next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
       error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
     });
-  }
-
-  verBloque(bloque: Bloque): void {
-    this.error.set('');
-    this.bloqueService.obtenerUrl(bloque.id).subscribe({
-      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
-      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
-    });
-  }
-
-  private cargarImagenesPersonaje(bloques: Bloque[]): void {
-    for (const bloque of bloques) {
-      this.bloqueService.obtenerUrl(bloque.id).subscribe({
-        next: (respuesta) => {
-          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
-        },
-      });
-    }
-  }
-
-  frasesPersonaje(bloque: Bloque): string[] {
-    return (bloque.texto ?? '')
-      .split('\n')
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-  }
-
-  fraseActualPersonaje(bloque: Bloque): string {
-    const frases = this.frasesPersonaje(bloque);
-    if (frases.length === 0) {
-      return '';
-    }
-    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
-    return frases[Math.min(indice, frases.length - 1)];
-  }
-
-  siguienteFrasePersonaje(bloque: Bloque): void {
-    const frases = this.frasesPersonaje(bloque);
-    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
-    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
-    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
   }
 
   abrirLienzo(): void {

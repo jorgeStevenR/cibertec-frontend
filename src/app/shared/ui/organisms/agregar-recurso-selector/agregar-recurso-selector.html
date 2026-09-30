@@ -1,0 +1,16 @@
+<ui-modal [open]="open()" title="Agregar actividad o recurso" (closed)="closed.emit()">
+  <section class="grupo" *ngFor="let grupo of grupos">
+    <h3 class="grupo-titulo">{{ grupo.titulo }}</h3>
+    <ul class="opciones">
+      <li *ngFor="let op of grupo.opciones">
+        <button type="button" class="opcion" (click)="elegido.emit(op.tipo)">
+          <span class="opcion-icono" aria-hidden="true">{{ op.icono }}</span>
+          <span class="opcion-texto">
+            <span class="opcion-nombre">{{ op.nombre }}</span>
+            <span class="opcion-descripcion">{{ op.descripcion }}</span>
+          </span>
+        </button>
+      </li>
+    </ul>
+  </section>
+</ui-modal>

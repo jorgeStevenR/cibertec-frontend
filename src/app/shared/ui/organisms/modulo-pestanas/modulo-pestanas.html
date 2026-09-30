@@ -1,0 +1,33 @@
+<div class="fila principal" role="tablist" aria-label="Módulos del curso">
+  <button
+    *ngFor="let rama of ramas()"
+    type="button"
+    role="tab"
+    class="pestana"
+    [class.activa]="raizActiva()?.id === rama.id"
+    [attr.aria-selected]="raizActiva()?.id === rama.id"
+    (click)="elegirRaiz(rama)"
+  >
+    <span *ngIf="rama.hijos.length > 0" class="chevron" aria-hidden="true">⌄</span>
+    {{ rama.titulo }}
+  </button>
+</div>
+
+<div
+  class="fila secundaria"
+  role="tablist"
+  *ngIf="subPestanas().length > 0"
+  [attr.aria-label]="'Submódulos de ' + raizActiva()?.titulo"
+>
+  <button
+    *ngFor="let sub of subPestanas()"
+    type="button"
+    role="tab"
+    class="pestana"
+    [class.activa]="seleccionadoId() === sub.id"
+    [attr.aria-selected]="seleccionadoId() === sub.id"
+    (click)="seleccionar.emit(sub.id)"
+  >
+    {{ sub.titulo }}
+  </button>
+</div>

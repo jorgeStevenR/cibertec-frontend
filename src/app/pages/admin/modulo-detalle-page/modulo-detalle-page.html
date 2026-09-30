@@ -32,40 +32,21 @@
   <h3>Bloques</h3>
   <ul class="bloques-list">
     <li *ngFor="let bloque of bloques()">
-      <ng-container [ngSwitch]="bloque.tipo">
-        <p *ngSwitchCase="'TEXTO'" class="bloque-texto">{{ bloque.texto }}</p>
+      <app-bloque-vista [bloque]="bloque"></app-bloque-vista>
+    </li>
+  </ul>
+</div>
 
-        <div *ngSwitchCase="'IMAGEN'" class="bloque-imagen">
-          <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
-            🖼️ {{ bloque.nombreArchivo }}
-          </button>
-        </div>
-
-        <div *ngSwitchCase="'ARCHIVO'" class="bloque-archivo">
-          <button type="button" class="bloque-archivo-btn" (click)="verBloque(bloque)">
-            📎 {{ bloque.nombreArchivo }}
-          </button>
-        </div>
-
-        <div *ngSwitchCase="'VIDEO'" class="bloque-video">
-          <iframe [src]="bloque.urlVideo! | embedVideoUrl" allowfullscreen></iframe>
-        </div>
-
-        <div *ngSwitchCase="'PERSONAJE'" class="bloque-personaje">
-          <img
-            *ngIf="personajeImagenUrls()[bloque.id] as url"
-            [src]="url"
-            [alt]="bloque.nombreArchivo ?? 'Personaje'"
-            class="personaje-imagen"
-          />
-          <button type="button" class="personaje-burbuja" (click)="siguienteFrasePersonaje(bloque)">
-            {{ fraseActualPersonaje(bloque) }}
-            <span *ngIf="frasesPersonaje(bloque).length > 1" class="personaje-contador">
-              {{ (personajeFraseIndice()[bloque.id] ?? 0) + 1 }} / {{ frasesPersonaje(bloque).length }} · toca para seguir
-            </span>
-          </button>
-        </div>
-      </ng-container>
+<div class="bloques-section" *ngIf="paginas().length > 0 || paginasError()">
+  <h3>Páginas</h3>
+  <p *ngIf="paginasError()" class="empty-contenidos empty-contenidos-error">
+    No se pudieron cargar las páginas de este módulo — intenta recargar la página.
+  </p>
+  <ul class="bloques-list" *ngIf="paginas().length > 0">
+    <li *ngFor="let pagina of paginas()">
+      <a class="pagina-link" [routerLink]="['/admin/cursos', cursoId, 'modulos', moduloId, 'paginas', pagina.id]">
+        <span aria-hidden="true">📄</span> {{ pagina.titulo }}
+      </a>
     </li>
   </ul>
 </div>

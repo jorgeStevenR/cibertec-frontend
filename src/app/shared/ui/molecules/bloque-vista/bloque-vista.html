@@ -1,0 +1,25 @@
+<ng-container [ngSwitch]="bloque().tipo">
+  <p *ngSwitchCase="'TEXTO'" class="texto">{{ bloque().texto }}</p>
+
+  <figure *ngSwitchCase="'IMAGEN'" class="imagen">
+    <img *ngIf="imagenUrl() as url" [src]="url" [alt]="bloque().nombreArchivo ?? 'Imagen'" loading="lazy" />
+    <p *ngIf="!imagenUrl() && !imagenError()" class="estado">Cargando imagen…</p>
+    <button *ngIf="imagenError()" type="button" class="archivo-btn" (click)="abrirArchivo()">
+      <span aria-hidden="true">🖼️</span> {{ bloque().nombreArchivo ?? 'Ver imagen' }}
+    </button>
+  </figure>
+
+  <button *ngSwitchCase="'ARCHIVO'" type="button" class="archivo-btn" (click)="abrirArchivo()">
+    <span aria-hidden="true">📎</span> {{ bloque().nombreArchivo ?? 'Archivo' }}
+  </button>
+
+  <div *ngSwitchCase="'VIDEO'" class="video">
+    <iframe
+      [src]="bloque().urlVideo! | embedVideoUrl"
+      title="Video"
+      allowfullscreen
+    ></iframe>
+  </div>
+</ng-container>
+
+<p *ngIf="error()" class="error" role="alert">{{ error() }}</p>

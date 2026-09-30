@@ -1,8 +1,10 @@
 <div class="cr-overlay">
-  <div class="cr-panel">
+  <div class="cr-panel" role="dialog" aria-modal="true" aria-labelledby="cr-titulo">
     <div class="cr-header">
-      <h2>{{ titulo }}</h2>
-      <button type="button" class="cr-btn-cerrar" (click)="cerrar()">✕ Cerrar</button>
+      <h2 id="cr-titulo">{{ titulo }}</h2>
+      <button #botonCerrar type="button" class="cr-btn-cerrar" (click)="cerrar()">
+        <span aria-hidden="true">✕</span> Cerrar
+      </button>
     </div>
 
     <p *ngIf="error()" class="cr-error">{{ error() }}</p>

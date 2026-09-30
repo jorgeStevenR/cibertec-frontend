@@ -1,0 +1,26 @@
+<section class="presentacion" aria-labelledby="presentacion-titulo">
+  <div class="sobre">
+    <p class="etiqueta" id="presentacion-titulo">Sobre el curso</p>
+    <p class="descripcion">{{ curso().descripcion || 'El profesor todavía no agregó una descripción.' }}</p>
+    <p class="programa" *ngIf="curso().programaNombre as programa">
+      Programa: <strong>{{ programa }}</strong>
+    </p>
+    <curso-datos
+      [codigo]="curso().codigo"
+      [periodo]="curso().periodo"
+      [fechaInicio]="curso().fechaInicio"
+      [fechaFin]="curso().fechaFin"
+    ></curso-datos>
+  </div>
+
+  <aside class="profesor" aria-label="Profesor del curso">
+    <p class="etiqueta">Profesor</p>
+    <div class="profesor-fila">
+      <span class="avatar" aria-hidden="true">{{ iniciales() || '?' }}</span>
+      <div class="profesor-datos">
+        <span class="profesor-nombre">{{ curso().profesorNombre ?? 'Sin asignar' }}</span>
+        <a *ngIf="curso().profesorEmail as email" class="profesor-correo" [href]="'mailto:' + email">{{ email }}</a>
+      </div>
+    </div>
+  </aside>
+</section>

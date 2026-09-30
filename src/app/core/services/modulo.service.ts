@@ -24,6 +24,12 @@ export class ModuloService {
     return this.http.put<Modulo>(`${API_BASE_URL}/modulos/${id}`, datos);
   }
 
+  // Reordena un grupo de hermanos completo (null = módulos raíz). Si falta o
+  // sobra algún id del grupo, el backend responde 400.
+  reordenar(cursoId: number, moduloPadreId: number | null, ids: number[]): Observable<void> {
+    return this.http.patch<void>(`${API_BASE_URL}/cursos/${cursoId}/modulos/orden`, { moduloPadreId, ids });
+  }
+
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/modulos/${id}`);
   }

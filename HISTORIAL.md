@@ -196,12 +196,26 @@ próxima sesión antes de dar por cerrado.
 - Revisar un "Failed to fetch" puntual visto una vez en la pestaña
   Participantes del profesor — no se pudo reproducir de forma consistente.
 - Accesibilidad y responsive: deuda pendiente general (detalle en `CLAUDE.md`).
-- Deuda menor detectada en la revisión de PR de Cuestionarios (no bloqueante):
-  el formulario de pregunta en `cuestionario-editor` todavía no usa
-  ReactiveForms; `tiempoLimiteMinutos` no tiene cronómetro ni se hace cumplir
-  (falta decisión de producto); `resultadosCargados` nunca se resetea; falta
-  indicador de "ya respondido" en la lista de cuestionarios del estudiante;
-  `cerrarCuestionario()` no recarga tras enviar; sin tests unitarios todavía.
+- Cuestionarios: `tiempoLimiteMinutos` no tiene cronómetro ni se hace cumplir
+  (falta decisión de producto). El resto de la deuda de la revisión de PR se
+  cerró el 2026-09-30 (ver log).
+- **Probar en el navegador** lo del 2026-09-30: formulario de pregunta del
+  profesor (errores por campo, quitar la opción marcada como correcta), chips
+  "Respondido / Sin responder" del estudiante (hace 1 llamada a `mi-intento`
+  por cuestionario — si un curso tiene muchos, conviene que el backend mande
+  el estado en el listado), y Escape/foco en ambos overlays.
+- Escape + devolución de foco: hecho en los overlays de cuestionario; falta en
+  `ui-modal` y `lienzo`.
+- **Páginas: API verificada, falta el navegador.** El 2026-09-30 se probaron
+  con llamadas directas todos los endpoints que usa el frontend (curso 31 /
+  módulo 19, profesor `marco.aguilar@cibertec.test`, estudiante
+  `camila.torres@cibertec.test`, admin `admin@cibertec.com` / `Admin123!`;
+  el resto de las cuentas de simulación usa `Sim12345!`): crear, validaciones
+  400 de título, texto con acentos, imagen, reordenar bloques y páginas
+  (persiste), orden incompleto → 400, editar y borrar bloque, bloques de página
+  fuera de los sueltos del módulo, estudiante y admin leen (200) pero no
+  escriben (403), borrar página → 404 después. Todo lo creado se borró. Falta
+  recorrer la UI en el navegador (incluido mobile).
 
 ## Integración con backend
 
@@ -229,6 +243,19 @@ próxima sesión antes de dar por cerrado.
   en vez de modales chicos, para tener espacio de edición cómodo.
 
 ## Decisiones importantes
+
+- **Módulos anidados (pedido del usuario, 2026-09-30, con capturas de un
+  Moodle de referencia)**: NO es un nivel fijo "Corte" (se propuso una
+  entidad Sección y el usuario la corrigió). Es que **un módulo puede tener
+  submódulos**: "Primer Corte" es un módulo común con hijos "Inicio",
+  "Semana 1", "Semana 2 - 3", "Evaluación"…; los nombres los elige el
+  profesor. Un nivel de anidamiento (padre → hijos); padre e hijos pueden
+  tener su propio contenido. UI: módulos raíz = pestañas (General | Primer
+  Corte | …), hijos = sub-pestañas, navegación lateral en árbol. "General"
+  es un módulo raíz más, con la presentación del profesor (perfil, lo carga
+  el profesor) y los datos del curso (los carga el admin). Requiere backend
+  (`moduloPadreId`): prompt entregado al usuario. Hasta que exista, los
+  módulos siguen en una lista plana.
 
 - **Standalone components** en todo el proyecto — sin NgModules.
 - **Signals** para estado local de componente — no se usa NgRx ni un store
@@ -283,6 +310,104 @@ próxima sesión antes de dar por cerrado.
   intencional contra escalamiento de privilegios.
 
 ## Log de sesiones
+
+### 2026-09-30
+- Backend apagado: no se pudieron verificar los endpoints del estudiante (sigue
+  en "En progreso").
+- Cierre de la deuda de Cuestionarios: el formulario de pregunta de
+  `cuestionario-editor` pasó a ReactiveForms (`FormArray` de opciones,
+  `textarea-field`/`form-field`, errores por campo, validador de grupo
+  `correctaValidator`). Los resultados se vuelven a pedir cada vez que se
+  entra a la pestaña (se quitó `resultadosCargados`). La lista del estudiante
+  muestra "Respondido: nota / máx", "Sin responder" o "No disponible"
+  (consulta `mi-intento` por cuestionario como carga no crítica), y al enviar
+  el overlay emite `respondido` para actualizar el chip sin recargar.
+- Accesibilidad en `cuestionario-editor` y `cuestionario-responder`:
+  `role="dialog"`, Escape cierra (salvo que haya un confirm-dialog encima), el
+  foco va al botón Cerrar al abrir y vuelve al disparador al cerrar.
+- Lógica pura en `core/utils/cuestionario.util.ts` con tests (91 tests en verde).
+- A pedido del usuario, la tarjeta de módulo del profesor pasó a un **selector
+  único "Agregar actividad o recurso"** (estilo Moodle): un botón al pie de
+  cada módulo abre `shared/ui/organisms/agregar-recurso-selector` con
+  Actividades (actividad con archivo, cuestionario) y Recursos (texto, imagen,
+  video, archivo, personaje, contenido personalizable); cada opción abre el
+  flujo de creación que ya existía. Se quitaron los botones sueltos
+  ("+ Agregar contenido", "Nueva actividad", "Nuevo cuestionario", "Abrir
+  editor") y los "Sin X todavía": cada sección solo aparece si tiene algo, y
+  un módulo vacío muestra un único mensaje. El pegado/arrastre de archivos en
+  la zona del módulo sigue igual. Después, también a pedido del usuario:
+  "Texto" se escribe **en línea** dentro del módulo (textarea al final de los
+  bloques, con foco y scroll automáticos, Escape cancela) en vez de en un
+  modal, y el modal de bloques ya no tiene pestañas de tipo — abre directo en
+  el tipo elegido con título propio ("Agregar video", etc.). Sin probar en el
+  navegador todavía.
+- **Recurso "Página" de los módulos** (backend nuevo, ver prompt del usuario):
+  un módulo tiene varias páginas con título y bloques apilados, como la
+  Página de Moodle. El lienzo sigue siendo otro recurso aparte.
+  - Modelo `PaginaModulo` (`core/models/pagina-modulo.model.ts`) y
+    `PaginaModuloService`. Se llamó así para no chocar con `pagina.model.ts`,
+    que es la paginación de listados (`PaginaResponse<T>`).
+  - `Bloque` suma `paginaId`; `BloqueService` recibe un `ContenedorBloques`
+    (`{tipo:'modulo'|'pagina', id}`) en vez de duplicar métodos.
+  - **PERSONAJE eliminado de los bloques** (decisión del usuario): el backend
+    nunca tuvo ese tipo (`crearPersonaje` llamaba un endpoint inexistente).
+    El personaje sigue existiendo dentro del lienzo.
+  - Componentes nuevos: `shared/ui/molecules/bloque-vista` (lectura de un
+    bloque; las imágenes se muestran inline pidiendo la URL firmada de 15 min
+    al renderizar) y `shared/ui/organisms/bloques-editor` (editor controlado:
+    pegar/arrastrar, texto en línea, modal de video/imagen/archivo, editar,
+    borrar, reordenar arrastrando o con ↑/↓ accesibles por teclado). Toda esa
+    lógica salió de `profesor/curso-detalle-page`, que bajó mucho de tamaño.
+  - Profesor: "Página" en el selector de recursos (modal de título → crea y
+    abre), sección "Páginas" por módulo (renombrar, eliminar, ↑/↓), páginas en
+    la navegación lateral (📄; las hojas del lienzo pasan a 🎨).
+  - Vista `pages/pagina-modulo-page`, **compartida por los 3 paneles** según
+    `data.panel` de la ruta (profesor edita; estudiante/admin leen), con
+    "← Anterior / Siguiente →" entre las páginas del módulo. Rutas:
+    `/profesor/cursos/:cursoId/paginas/:paginaId`,
+    `/estudiante/cursos/:cursoId/paginas/:paginaId`,
+    `/admin/cursos/:cursoId/modulos/:moduloId/paginas/:paginaId`.
+  - Tests: `core/utils/orden.util.ts` (`moverElemento`, `vecinos`).
+- **Submódulos** (backend listo; spec pegada por el usuario): `Modulo` suma
+  `moduloPadreId` (un nivel). `GET /cursos/{id}/modulos` sigue plano; se
+  agrupa con `core/utils/modulo-arbol.util.ts` (`armarArbolModulos`,
+  `aplanarArbol`, `idsDelGrupo`, `moverModulo`, con tests).
+  `ModuloService.reordenar(cursoId, padreId, ids)` = PATCH de un grupo
+  completo de hermanos. **`ModuloRequest.moduloPadreId` es obligatorio en el
+  tipo a propósito**: un PUT sin ese campo mueve el módulo a la raíz; así el
+  compilador marcó el "Editar módulo" del admin, que ahora conserva el padre.
+  - Profesor: árbol colapsable (submódulos con sangría bajo su padre, "N
+    submódulos de «X» ▾"), botón "+ Submódulo" en cada raíz, select "Módulo
+    padre" en el modal (bloqueado si el módulo ya tiene hijos; el campo
+    numérico "Orden" se quitó: el orden se calcula solo). Mover arrastrando la
+    cabecera: soltar sobre otra cabecera = queda antes de ella (reordena o
+    cambia de padre), zona "Suelta aquí para moverlo dentro de «X»", zona
+    "…módulo principal (al final)"; también ↑/↓ entre hermanos. Optimista:
+    PATCH si no cambia el padre, PUT + PATCH si cambia; con error se revierte
+    y se muestra el `message` del backend tal cual. Los `ng-template` de
+    tarjeta/nav tienen contexto tipado (`ngTemplateContextGuard`) para no
+    caer en `any`.
+  - Estudiante y admin: orden de árbol, submódulos con sangría; el número que
+    se muestra es la posición entre hermanos (el backend numera desde 0
+    después de un PATCH).
+  - Verificado contra el backend (curso 31, Marco): crear padre, mover
+    adentro, reordenar, volver a raíz, los 3 mensajes de 400 y orden
+    incompleto → 400; las páginas del módulo movido siguen. Se dejó el curso
+    como estaba. Falta probar el arrastre en el navegador.
+- **Vista del estudiante con pestañas tipo Moodle** (el usuario comparó con
+  capturas de su Moodle y la lista larga "no tenía nada que ver"): nuevo
+  `shared/ui/organisms/modulo-pestanas` (fila de módulos raíz con ⌄ si tienen
+  hijos + fila de submódulos; si el raíz tiene contenido propio aparece como
+  sub-pestaña "Inicio"). Se muestra **un módulo a la vez**; la presentación
+  del curso va dentro de la **primera pestaña** (el "General" de Moodle), no
+  arriba de todo. La pestaña elegida queda en el fragmento `#modulo-X` para
+  volver a ella (ej. desde una página). La navegación lateral es un árbol y
+  el título del módulo elige la pestaña.
+  - Datos de ejemplo en el curso 31: "Modulo" renombrado a "General"; Primer
+    Corte (Inicio, Semana 1 — Introducción a Angular, Semana 2 - 3,
+    Evaluación), Segundo Corte (Inicio), Tercer Corte (Inicio).
+  - Pendiente: aplicar las mismas pestañas a la vista del profesor (hoy usa
+    el árbol editable de la spec) y del admin, si el usuario lo quiere.
 
 ### 2026-09-16
 - Rediseño del login: carrusel de fotos + logo real + toggle de contraseña +

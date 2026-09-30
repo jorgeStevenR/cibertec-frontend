@@ -1,0 +1,76 @@
+.grupo + .grupo {
+  margin-top: 20px;
+}
+
+.grupo-titulo {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.opciones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.opcion {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--bright);
+    background: rgba(24, 119, 242, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bright);
+    outline-offset: 2px;
+  }
+}
+
+.opcion-icono {
+  flex-shrink: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.opcion-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.opcion-nombre {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.opcion-descripcion {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}

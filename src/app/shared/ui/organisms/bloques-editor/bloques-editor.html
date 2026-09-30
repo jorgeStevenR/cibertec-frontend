@@ -1,0 +1,155 @@
+<ui-alert [message]="error()"></ui-alert>
+
+<div class="barra-agregar" *ngIf="mostrarBarraAgregar()" role="group" aria-label="Agregar contenido">
+  <button type="button" class="barra-btn" (click)="iniciarAgregar('TEXTO')">
+    <span aria-hidden="true">🔤</span> Texto
+  </button>
+  <button type="button" class="barra-btn" (click)="iniciarAgregar('IMAGEN')">
+    <span aria-hidden="true">🖼️</span> Imagen
+  </button>
+  <button type="button" class="barra-btn" (click)="iniciarAgregar('VIDEO')">
+    <span aria-hidden="true">🎬</span> Video
+  </button>
+  <button type="button" class="barra-btn" (click)="iniciarAgregar('ARCHIVO')">
+    <span aria-hidden="true">📎</span> Archivo
+  </button>
+</div>
+
+<div
+  class="zona"
+  tabindex="0"
+  [class.drop-active]="archivoEncima()"
+  (paste)="onPasteZona($event)"
+  (dragover)="onDragOverZona($event)"
+  (dragleave)="onDragLeaveZona()"
+  (drop)="onDropZona($event)"
+>
+  <p class="hint">Haz clic aquí y pega (Ctrl+V) texto o una imagen, o arrastra un archivo — se agrega solo.</p>
+
+  <ul class="lista" *ngIf="bloques().length > 0">
+    <li
+      *ngFor="let bloque of bloques(); let i = index; let primero = first; let ultimo = last; trackBy: porId"
+      draggable="true"
+      (dragstart)="arrastrarInicio(bloque.id)"
+      (dragover)="permitirSoltar($event)"
+      (drop)="soltarSobre(bloque.id)"
+    >
+      <span class="handle" title="Arrastra para reordenar" aria-hidden="true">⠿</span>
+
+      <div class="cuerpo">
+        <app-bloque-vista *ngIf="editandoId() !== bloque.id; else edicion" [bloque]="bloque"></app-bloque-vista>
+        <ng-template #edicion>
+          <label class="sr-only" [for]="idBase() + '-editar-' + bloque.id">Editar texto</label>
+          <textarea
+            class="campo"
+            rows="3"
+            [id]="idBase() + '-editar-' + bloque.id"
+            [value]="textoEditando()"
+            (input)="textoEditando.set($any($event.target).value)"
+            (keydown.escape)="cancelarEditar()"
+          ></textarea>
+          <div class="acciones-form">
+            <button type="button" class="cancel-btn" (click)="cancelarEditar()">Cancelar</button>
+            <ui-button [fullWidth]="false" [loading]="guardando()" (pressed)="guardarEdicion()">Guardar</ui-button>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="acciones" *ngIf="editandoId() !== bloque.id">
+        <button type="button" class="icono-btn" aria-label="Subir bloque" [disabled]="primero" (click)="mover(i, -1)">
+          ↑
+        </button>
+        <button type="button" class="icono-btn" aria-label="Bajar bloque" [disabled]="ultimo" (click)="mover(i, 1)">
+          ↓
+        </button>
+        <button *ngIf="bloque.tipo === 'TEXTO'" type="button" class="accion-btn" (click)="abrirEditar(bloque)">
+          Editar
+        </button>
+        <button type="button" class="accion-btn peligro" (click)="pedirEliminar(bloque)">Eliminar</button>
+      </div>
+    </li>
+  </ul>
+
+  <div class="texto-nuevo" *ngIf="textoNuevoAbierto()">
+    <label class="sr-only" [for]="idBase() + '-texto-nuevo'">Nuevo texto</label>
+    <textarea
+      class="campo"
+      rows="4"
+      [id]="idBase() + '-texto-nuevo'"
+      placeholder="Escribe el contenido…"
+      [value]="textoNuevo()"
+      (input)="textoNuevo.set($any($event.target).value)"
+      (keydown.escape)="cancelarTextoNuevo()"
+    ></textarea>
+    <div class="acciones-form">
+      <button type="button" class="cancel-btn" (click)="cancelarTextoNuevo()">Cancelar</button>
+      <ui-button
+        [fullWidth]="false"
+        [loading]="guardando()"
+        [disabled]="!textoNuevo().trim()"
+        (pressed)="guardarTextoNuevo()"
+      >
+        Agregar
+      </ui-button>
+    </div>
+  </div>
+
+  <p *ngIf="subiendo()" class="subiendo" role="status">Subiendo…</p>
+</div>
+
+<ui-modal [open]="modalTipo() !== null" [title]="modalTipo() ? titulosModal[modalTipo()!] : ''" (closed)="cerrarModal()">
+  <ng-container [ngSwitch]="modalTipo()">
+    <div *ngSwitchCase="'VIDEO'" class="form-modal">
+      <label class="sr-only" [for]="idBase() + '-video-url'">URL del video de YouTube</label>
+      <input
+        class="campo"
+        type="text"
+        [id]="idBase() + '-video-url'"
+        placeholder="URL de YouTube"
+        [value]="videoUrl()"
+        (input)="videoUrl.set($any($event.target).value)"
+      />
+      <div class="acciones-form">
+        <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
+        <ui-button
+          [fullWidth]="false"
+          [loading]="guardando()"
+          [disabled]="!videoUrl().trim()"
+          (pressed)="guardarVideo()"
+        >
+          Agregar
+        </ui-button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'IMAGEN'" class="form-modal">
+      <label class="file-btn">
+        {{ subiendo() ? 'Subiendo…' : 'Elegir imagen…' }}
+        <input type="file" accept="image/*" [disabled]="subiendo()" (change)="onArchivoElegido($event, 'IMAGEN')" />
+      </label>
+      <div class="acciones-form">
+        <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+
+    <div *ngSwitchCase="'ARCHIVO'" class="form-modal">
+      <label class="file-btn">
+        {{ subiendo() ? 'Subiendo…' : 'Elegir archivo…' }}
+        <input type="file" [disabled]="subiendo()" (change)="onArchivoElegido($event, 'ARCHIVO')" />
+      </label>
+      <div class="acciones-form">
+        <button type="button" class="cancel-btn" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </ng-container>
+</ui-modal>
+
+<confirm-dialog
+  [open]="bloqueAEliminar() !== null"
+  title="Eliminar bloque"
+  message="¿Seguro que quieres eliminar este bloque?"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="bloqueAEliminar.set(null)"
+></confirm-dialog>

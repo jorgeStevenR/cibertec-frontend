@@ -23,6 +23,7 @@ import { Matricula } from '../../../core/models/matricula.model';
 import { Usuario } from '../../../core/models/usuario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { formatearFecha } from '../../../core/utils/labels.util';
+import { aplanarArbol, armarArbolModulos } from '../../../core/utils/modulo-arbol.util';
 import { datosAcademicosCompletos, estadoCupo } from '../../../core/utils/curso.util';
 
 // El backend pagina /api/usuarios (default 20), pero acá necesitamos "todos"
@@ -76,8 +77,9 @@ export class CursoDetallePage implements OnInit {
   readonly actualizandoEstado = signal(false);
 
   readonly moduloColumnas: DataTableColumn<Modulo>[] = [
-    { key: 'orden', label: 'Orden' },
-    { key: 'titulo', label: 'Título' },
+    // Sin columna 'Orden': la tabla ya sale en orden de árbol y el backend numera desde 0.
+    // Los submódulos se muestran debajo de su módulo padre, marcados con ↳.
+    { key: 'titulo', label: 'Título', format: (m) => (m.moduloPadreId === null ? m.titulo : `↳ ${m.titulo}`) },
   ];
 
   readonly matriculaColumnas: DataTableColumn<Matricula>[] = [
@@ -125,7 +127,7 @@ export class CursoDetallePage implements OnInit {
     }).subscribe({
       next: ({ curso, modulos, matriculas, usuarios }) => {
         this.curso.set(curso);
-        this.modulos.set([...modulos].sort((a, b) => a.orden - b.orden));
+        this.modulos.set(aplanarArbol(armarArbolModulos(modulos)));
         this.matriculas.set(matriculas);
         this.usuarios.set(usuarios.contenido);
         this.cargando.set(false);
@@ -199,9 +201,9 @@ export class CursoDetallePage implements OnInit {
   abrirCrearModulo(): void {
     this.moduloModoEdicion.set(false);
     this.moduloEditando.set(null);
-    const siguienteOrden = this.modulos().length
-      ? Math.max(...this.modulos().map((m) => m.orden)) + 1
-      : 1;
+    // El admin crea módulos principales; el orden es relativo a sus hermanos (las raíces).
+    const raices = this.modulos().filter((m) => m.moduloPadreId === null);
+    const siguienteOrden = raices.length ? Math.max(...raices.map((m) => m.orden)) + 1 : 1;
     this.moduloForm.reset({ titulo: '', orden: siguienteOrden });
     this.moduloModalAbierto.set(true);
   }
@@ -229,8 +231,13 @@ export class CursoDetallePage implements OnInit {
     const editando = this.moduloModoEdicion() ? this.moduloEditando() : null;
 
     const obs = editando
-      ? this.moduloService.actualizar(editando.id, { titulo: valores.titulo!, orden: Number(valores.orden) })
-      : this.moduloService.crear(this.cursoId, { titulo: valores.titulo!, orden: Number(valores.orden) });
+      ? this.moduloService.actualizar(editando.id, {
+          titulo: valores.titulo!,
+          orden: Number(valores.orden),
+          // Se conserva el padre: omitirlo movería un submódulo a la raíz.
+          moduloPadreId: editando.moduloPadreId,
+        })
+      : this.moduloService.crear(this.cursoId, { titulo: valores.titulo!, orden: Number(valores.orden), moduloPadreId: null });
 
     obs.subscribe({
       next: () => {

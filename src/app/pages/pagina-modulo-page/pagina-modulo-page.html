@@ -1,0 +1,89 @@
+<article class="pagina">
+  <a class="back-link" [routerLink]="volverLink()" [fragment]="volverFragmento()">
+    ← Volver {{ modulo() ? 'a ' + modulo()!.titulo : 'al curso' }}
+  </a>
+
+  <ui-alert [message]="error()"></ui-alert>
+  <p *ngIf="cargando() && !pagina()" class="estado" role="status">Cargando…</p>
+
+  <ng-container *ngIf="pagina() as p">
+    <header class="encabezado">
+      <p class="migas" *ngIf="modulo() as m">
+        {{ m.titulo }}<ng-container *ngIf="posicion() as pos"> · Página {{ pos.actual }} de {{ pos.total }}</ng-container>
+      </p>
+
+      <ng-container *ngIf="!renombrando(); else formTitulo">
+        <div class="titulo-fila">
+          <h1>{{ p.titulo }}</h1>
+          <div class="acciones" *ngIf="editable">
+            <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirRenombrar()">Renombrar</ui-button>
+            <ui-button variant="danger" [fullWidth]="false" (pressed)="confirmEliminarAbierto.set(true)">
+              Eliminar página
+            </ui-button>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-template #formTitulo>
+        <form class="form-titulo" [formGroup]="tituloForm" (ngSubmit)="guardarTitulo()" novalidate>
+          <ui-alert [message]="errorTitulo()"></ui-alert>
+          <form-field
+            label="Título de la página"
+            inputId="pagina-titulo-edicion"
+            [control]="tituloForm.controls.titulo"
+            [requerido]="true"
+            [errorMessage]="
+              tituloForm.controls.titulo.hasError('maxlength')
+                ? 'Máximo ' + tituloMax + ' caracteres.'
+                : 'Escribe el título de la página.'
+            "
+          ></form-field>
+          <div class="form-acciones">
+            <button type="button" class="cancel-btn" (click)="cancelarRenombrar()">Cancelar</button>
+            <ui-button type="submit" [fullWidth]="false" [loading]="guardandoTitulo()">Guardar</ui-button>
+          </div>
+        </form>
+      </ng-template>
+    </header>
+
+    <section class="contenido" aria-label="Contenido de la página">
+      <app-bloques-editor
+        *ngIf="editable && contenedor() as c; else lectura"
+        [contenedor]="c"
+        [bloques]="bloques()"
+        [mostrarBarraAgregar]="true"
+        (bloquesChange)="bloques.set($event)"
+      ></app-bloques-editor>
+
+      <ng-template #lectura>
+        <p *ngIf="bloques().length === 0" class="estado">Esta página todavía no tiene contenido.</p>
+        <ul class="bloques" *ngIf="bloques().length > 0">
+          <li *ngFor="let bloque of bloques()">
+            <app-bloque-vista [bloque]="bloque"></app-bloque-vista>
+          </li>
+        </ul>
+      </ng-template>
+    </section>
+
+    <nav class="paginador" aria-label="Páginas del módulo" *ngIf="navegacion().anterior || navegacion().siguiente">
+      <a *ngIf="navegacion().anterior as ant" class="paso anterior" [routerLink]="paginaLink(ant)">
+        <span class="paso-etiqueta">← Anterior</span>
+        <span class="paso-titulo">{{ ant.titulo }}</span>
+      </a>
+      <a *ngIf="navegacion().siguiente as sig" class="paso siguiente" [routerLink]="paginaLink(sig)">
+        <span class="paso-etiqueta">Siguiente →</span>
+        <span class="paso-titulo">{{ sig.titulo }}</span>
+      </a>
+    </nav>
+  </ng-container>
+</article>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar página"
+  [message]="'¿Seguro que quieres eliminar la página \'' + (pagina()?.titulo ?? '') + '\'? Se borra también todo su contenido.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

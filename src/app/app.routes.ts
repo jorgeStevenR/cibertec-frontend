@@ -71,6 +71,12 @@ export const routes: Routes = [
             (m) => m.ModuloDetallePage,
           ),
       },
+      {
+        path: 'cursos/:cursoId/modulos/:moduloId/paginas/:paginaId',
+        data: { panel: 'admin' },
+        loadComponent: () =>
+          import('./pages/pagina-modulo-page/pagina-modulo-page').then((m) => m.PaginaModuloPage),
+      },
     ],
   },
   {
@@ -134,6 +140,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'cursos/:cursoId/paginas/:paginaId',
+        data: { panel: 'profesor' },
+        loadComponent: () =>
+          import('./pages/pagina-modulo-page/pagina-modulo-page').then((m) => m.PaginaModuloPage),
+      },
+      {
         path: 'perfil',
         loadComponent: () =>
           import('./pages/profesor/perfil-page/perfil-page').then((m) => m.ProfesorPerfilPage),
@@ -165,6 +177,12 @@ export const routes: Routes = [
           import('./pages/estudiante/curso-detalle-page/curso-detalle-page').then(
             (m) => m.EstudianteCursoDetallePage,
           ),
+      },
+      {
+        path: 'cursos/:cursoId/paginas/:paginaId',
+        data: { panel: 'estudiante' },
+        loadComponent: () =>
+          import('./pages/pagina-modulo-page/pagina-modulo-page').then((m) => m.PaginaModuloPage),
       },
     ],
   },

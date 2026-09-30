@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, Directive, computed, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -9,8 +9,9 @@ import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { LienzoComponent } from '../../../shared/ui/organisms/lienzo/lienzo';
 import { CuestionarioResponderComponent } from '../../../shared/ui/organisms/cuestionario-responder/cuestionario-responder';
-import { EmbedVideoUrlPipe } from '../../../shared/pipes/embed-video-url.pipe';
-import { CursoDatos } from '../../../shared/ui/molecules/curso-datos/curso-datos';
+import { BloqueVista } from '../../../shared/ui/molecules/bloque-vista/bloque-vista';
+import { ModuloPestanas, RamaPestanas } from '../../../shared/ui/organisms/modulo-pestanas/modulo-pestanas';
+import { CursoPresentacion } from '../../../shared/ui/molecules/curso-presentacion/curso-presentacion';
 import { CursoService } from '../../../core/services/curso.service';
 import { ModuloService } from '../../../core/services/modulo.service';
 import { ContenidoService } from '../../../core/services/contenido.service';
@@ -20,6 +21,7 @@ import { EntregaService } from '../../../core/services/entrega.service';
 import { BloqueService } from '../../../core/services/bloque.service';
 import { CuestionarioService } from '../../../core/services/cuestionario.service';
 import { LienzoService } from '../../../core/services/lienzo.service';
+import { PaginaModuloService } from '../../../core/services/pagina-modulo.service';
 import { Curso } from '../../../core/models/curso.model';
 import { Modulo } from '../../../core/models/modulo.model';
 import { Contenido } from '../../../core/models/contenido.model';
@@ -27,10 +29,16 @@ import { Matricula } from '../../../core/models/matricula.model';
 import { Actividad } from '../../../core/models/actividad.model';
 import { Entrega } from '../../../core/models/entrega.model';
 import { Bloque } from '../../../core/models/bloque.model';
-import { Cuestionario } from '../../../core/models/cuestionario.model';
+import { Cuestionario, IntentoDetalle } from '../../../core/models/cuestionario.model';
 import { LienzoResumen } from '../../../core/models/lienzo.model';
+import { PaginaModulo } from '../../../core/models/pagina-modulo.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
+import { aplanarArbol, armarArbolModulos } from '../../../core/utils/modulo-arbol.util';
 import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
+import {
+  EstadoCuestionarioEstudiante,
+  estadoCuestionarioEstudiante,
+} from '../../../core/utils/cuestionario.util';
 
 interface ModuloConContenidos {
   modulo: Modulo;
@@ -39,10 +47,26 @@ interface ModuloConContenidos {
   bloques: Bloque[];
   cuestionarios: Cuestionario[];
   cuestionariosError: boolean;
-  paginas: LienzoResumen[];
+  paginas: PaginaModulo[];
+  paginasError: boolean;
+  // Hojas del lienzo (diseño libre); no confundir con las páginas del módulo.
+  hojas: LienzoResumen[];
 }
 
 type Tab = 'curso' | 'participantes';
+
+interface ContextoNavModulo {
+  $implicit: ModuloConContenidos;
+  esHijo: boolean;
+}
+
+// Da tipo al contexto del ng-template de la navegación (sin esto, 'item' sería any).
+@Directive({ selector: 'ng-template[navModulo]', standalone: true })
+export class NavModuloEstudianteTemplate {
+  static ngTemplateContextGuard(_dir: NavModuloEstudianteTemplate, ctx: unknown): ctx is ContextoNavModulo {
+    return true;
+  }
+}
 
 @Component({
   selector: 'app-estudiante-curso-detalle-page',
@@ -50,19 +74,22 @@ type Tab = 'curso' | 'participantes';
   imports: [
     CommonModule,
     RouterLink,
-    CursoDatos,
+    CursoPresentacion,
     UiAlert,
     UiButton,
     DataTable,
     LienzoComponent,
     CuestionarioResponderComponent,
-    EmbedVideoUrlPipe,
+    BloqueVista,
+    ModuloPestanas,
+    NavModuloEstudianteTemplate,
   ],
   templateUrl: './curso-detalle-page.html',
   styleUrl: './curso-detalle-page.scss',
 })
 export class EstudianteCursoDetallePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly cursoService = inject(CursoService);
   private readonly moduloService = inject(ModuloService);
   private readonly contenidoService = inject(ContenidoService);
@@ -72,6 +99,7 @@ export class EstudianteCursoDetallePage implements OnInit {
   private readonly bloqueService = inject(BloqueService);
   private readonly cuestionarioService = inject(CuestionarioService);
   private readonly lienzoService = inject(LienzoService);
+  private readonly paginaModuloService = inject(PaginaModuloService);
 
   readonly cursoId = Number(this.route.snapshot.paramMap.get('cursoId'));
 
@@ -120,17 +148,14 @@ export class EstudianteCursoDetallePage implements OnInit {
   readonly archivosSeleccionados = signal<Record<number, File | null>>({});
   readonly entregando = signal<Record<number, boolean>>({});
 
-  readonly personajeImagenUrls = signal<Record<number, string>>({});
-  readonly personajeFraseIndice = signal<Record<number, number>>({});
-
   readonly lienzoAbierto = signal<{ moduloId: number; titulo: string; paginaInicialId: number | null } | null>(null);
 
   abrirLienzo(moduloId: number, titulo: string): void {
     this.lienzoAbierto.set({ moduloId, titulo, paginaInicialId: null });
   }
 
-  abrirPagina(moduloId: number, paginaId: number, tituloModulo: string): void {
-    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: paginaId });
+  abrirHoja(moduloId: number, hojaId: number, tituloModulo: string): void {
+    this.lienzoAbierto.set({ moduloId, titulo: tituloModulo, paginaInicialId: hojaId });
   }
 
   cerrarLienzo(): void {
@@ -139,12 +164,119 @@ export class EstudianteCursoDetallePage implements OnInit {
 
   readonly cuestionarioAbierto = signal<{ id: number; titulo: string } | null>(null);
 
+  // cuestionarioId -> mi intento (null = no respondí). Una clave ausente
+  // significa "no se pudo consultar" y la lista no muestra estado.
+  readonly misIntentos = signal<Record<number, IntentoDetalle | null>>({});
+
   abrirCuestionario(cuestionario: Cuestionario): void {
     this.cuestionarioAbierto.set({ id: cuestionario.id, titulo: cuestionario.titulo });
   }
 
+  // --- Pestañas de módulos (como Moodle): se muestra un módulo a la vez ---
+
+  readonly moduloSeleccionadoId = signal<number | null>(null);
+
+  readonly arbol = computed(() => {
+    const items = this.modulos();
+    const porId = new Map(items.map((i) => [i.modulo.id, i]));
+    return armarArbolModulos(items.map((i) => i.modulo)).map((rama) => ({
+      item: porId.get(rama.modulo.id)!,
+      hijos: rama.hijos.map((h) => porId.get(h.id)!),
+    }));
+  });
+
+  readonly ramasPestanas = computed<RamaPestanas[]>(() =>
+    this.arbol().map((rama) => ({
+      id: rama.item.modulo.id,
+      titulo: rama.item.modulo.titulo,
+      tieneContenidoPropio: !this.moduloVacio(rama.item),
+      hijos: rama.hijos.map((h) => ({ id: h.modulo.id, titulo: h.modulo.titulo })),
+    })),
+  );
+
+  readonly moduloVisible = computed(() => this.modulos().find((i) => i.modulo.id === this.moduloSeleccionadoId()) ?? null);
+
+  // La presentación del curso (profesor, datos) va en la primera pestaña, como "General" en Moodle.
+  readonly enPrimeraPestana = computed(() => {
+    const primera = this.arbol()[0];
+    const visible = this.moduloVisible();
+    return !!primera && !!visible && (visible.modulo.id === primera.item.modulo.id || visible.modulo.moduloPadreId === primera.item.modulo.id);
+  });
+
+  seleccionarModulo(moduloId: number): void {
+    this.moduloSeleccionadoId.set(moduloId);
+    // El fragmento en la URL permite volver a esta misma pestaña (ej. desde una página).
+    this.router.navigate([], { relativeTo: this.route, fragment: `modulo-${moduloId}`, replaceUrl: true, queryParamsHandling: 'preserve' });
+  }
+
+  // Primera vez: la pestaña del fragmento (#modulo-X) si existe; si no, la primera.
+  private inicializarPestana(): void {
+    const fragmento = this.route.snapshot.fragment ?? '';
+    const pedido = Number(fragmento.replace('modulo-', ''));
+    if (pedido && this.modulos().some((i) => i.modulo.id === pedido)) {
+      this.moduloSeleccionadoId.set(pedido);
+      return;
+    }
+    const primera = this.ramasPestanas()[0];
+    if (primera) {
+      this.moduloSeleccionadoId.set(!primera.tieneContenidoPropio && primera.hijos.length > 0 ? primera.hijos[0].id : primera.id);
+    }
+  }
+
+  moduloVacio(item: ModuloConContenidos): boolean {
+    return (
+      item.bloques.length === 0 &&
+      item.contenidos.length === 0 &&
+      item.actividades.length === 0 &&
+      item.cuestionarios.length === 0 &&
+      !item.cuestionariosError &&
+      item.paginas.length === 0 &&
+      !item.paginasError &&
+      item.hojas.length === 0
+    );
+  }
+
   cerrarCuestionario(): void {
     this.cuestionarioAbierto.set(null);
+  }
+
+  onCuestionarioRespondido(intento: IntentoDetalle): void {
+    this.misIntentos.update((mapa) => ({ ...mapa, [intento.cuestionarioId]: intento }));
+  }
+
+  estadoCuestionario(cuestionario: Cuestionario): EstadoCuestionarioEstudiante {
+    return estadoCuestionarioEstudiante(cuestionario, this.misIntentos()[cuestionario.id]);
+  }
+
+  // No crítico: si falla la consulta de un intento, ese cuestionario se lista
+  // sin chip de estado, pero se puede abrir igual (el overlay vuelve a consultar).
+  private cargarMisIntentos(modulos: ModuloConContenidos[]): void {
+    const ids = modulos.flatMap((m) => m.cuestionarios.map((c) => c.id));
+    if (ids.length === 0) {
+      return;
+    }
+    forkJoin(
+      ids.map((id) =>
+        this.cuestionarioService.obtenerMiIntento(id).pipe(
+          catchError((err: HttpErrorResponse) => {
+            console.error(`No se pudo consultar mi intento del cuestionario ${id}`, err);
+            return of(undefined);
+          }),
+        ),
+      ),
+    ).subscribe({
+      next: (intentos) => {
+        const mapa: Record<number, IntentoDetalle | null> = {};
+        ids.forEach((id, i) => {
+          const intento = intentos[i];
+          if (intento !== undefined) {
+            mapa[id] = intento;
+          }
+        });
+        this.misIntentos.set(mapa);
+      },
+      error: (err: HttpErrorResponse) => console.error('No se pudieron consultar mis intentos', err),
+    });
   }
 
   ngOnInit(): void {
@@ -196,7 +328,8 @@ export class EstudianteCursoDetallePage implements OnInit {
     }).subscribe({
       next: ({ curso, modulos }) => {
         this.curso.set(curso);
-        const ordenados = [...modulos].sort((a, b) => a.orden - b.orden);
+        // Orden de lectura: cada módulo seguido de sus submódulos (el orden es relativo entre hermanos).
+        const ordenados = aplanarArbol(armarArbolModulos(modulos));
 
         if (ordenados.length === 0) {
           this.modulos.set([]);
@@ -221,8 +354,16 @@ export class EstudianteCursoDetallePage implements OnInit {
                   return of({ items: [] as Cuestionario[], fallo: true });
                 }),
               ),
-              // No crítico: si falla, el módulo se ve igual sin las páginas del lienzo en la navegación.
-              paginas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
+              // Mismo criterio que cuestionarios: no tumba el módulo, pero el fallo se ve.
+              paginas: this.paginaModuloService.listarPorModulo(m.id).pipe(
+                map((items) => ({ items, fallo: false })),
+                catchError((err: HttpErrorResponse) => {
+                  console.error(`Fallo al cargar las páginas del módulo ${m.id}`, err);
+                  return of({ items: [] as PaginaModulo[], fallo: true });
+                }),
+              ),
+              // No crítico: si falla, el módulo se ve igual sin las hojas del lienzo en la navegación.
+              hojas: this.lienzoService.listar(m.id).pipe(catchError(() => of([] as LienzoResumen[]))),
             }),
           ),
         ).subscribe({
@@ -236,12 +377,14 @@ export class EstudianteCursoDetallePage implements OnInit {
               bloques: resultados[i].bloques,
               cuestionarios: resultados[i].cuestionarios.items,
               cuestionariosError: resultados[i].cuestionarios.fallo,
-              paginas: resultados[i].paginas,
+              paginas: resultados[i].paginas.items,
+              paginasError: resultados[i].paginas.fallo,
+              hojas: resultados[i].hojas,
             }));
             this.modulos.set(modulosConDatos);
+            this.inicializarPestana();
             this.cargarMisEntregas(modulosConDatos);
-            const personajes = modulosConDatos.flatMap((m) => m.bloques.filter((b) => b.tipo === 'PERSONAJE'));
-            this.cargarImagenesPersonaje(personajes);
+            this.cargarMisIntentos(modulosConDatos);
           },
           error: (err: HttpErrorResponse) => {
             this.cargando.set(false);
@@ -319,47 +462,6 @@ export class EstudianteCursoDetallePage implements OnInit {
       next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
       error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
     });
-  }
-
-  verBloque(bloque: Bloque): void {
-    this.error.set('');
-    this.bloqueService.obtenerUrl(bloque.id).subscribe({
-      next: (respuesta) => window.open(respuesta.url, '_blank', 'noopener'),
-      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
-    });
-  }
-
-  private cargarImagenesPersonaje(bloques: Bloque[]): void {
-    for (const bloque of bloques) {
-      this.bloqueService.obtenerUrl(bloque.id).subscribe({
-        next: (respuesta) => {
-          this.personajeImagenUrls.set({ ...this.personajeImagenUrls(), [bloque.id]: respuesta.url });
-        },
-      });
-    }
-  }
-
-  frasesPersonaje(bloque: Bloque): string[] {
-    return (bloque.texto ?? '')
-      .split('\n')
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-  }
-
-  fraseActualPersonaje(bloque: Bloque): string {
-    const frases = this.frasesPersonaje(bloque);
-    if (frases.length === 0) {
-      return '';
-    }
-    const indice = this.personajeFraseIndice()[bloque.id] ?? 0;
-    return frases[Math.min(indice, frases.length - 1)];
-  }
-
-  siguienteFrasePersonaje(bloque: Bloque): void {
-    const frases = this.frasesPersonaje(bloque);
-    const actual = this.personajeFraseIndice()[bloque.id] ?? 0;
-    const siguiente = actual + 1 >= frases.length ? 0 : actual + 1;
-    this.personajeFraseIndice.set({ ...this.personajeFraseIndice(), [bloque.id]: siguiente });
   }
 
 }
