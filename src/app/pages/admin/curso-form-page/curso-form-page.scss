@@ -80,6 +80,11 @@
   border-top: 1px solid var(--border, #dddfe2);
 }
 
+// Eliminar queda a la izquierda, separado de Cancelar/Guardar.
+.eliminar {
+  margin-right: auto;
+}
+
 .cancelar {
   padding: 10px 18px;
   border-radius: 10px;

@@ -133,6 +133,15 @@
       </div>
 
       <div class="acciones campo-completo">
+        <ui-button
+          *ngIf="modoEdicion"
+          class="eliminar"
+          variant="danger"
+          [fullWidth]="false"
+          (pressed)="confirmEliminarAbierto.set(true)"
+        >
+          Eliminar curso
+        </ui-button>
         <a class="cancelar" [routerLink]="volverUrl">Cancelar</a>
         <ui-button type="submit" [fullWidth]="false" [loading]="guardando()">
           {{ modoEdicion ? 'Guardar cambios' : 'Crear curso' }}
@@ -158,3 +167,13 @@
     </ol>
   </panel-seccion>
 </div>
+
+<confirm-dialog
+  [open]="confirmEliminarAbierto()"
+  title="Eliminar curso"
+  [message]="'¿Seguro que quieres eliminar «' + (curso()?.titulo ?? '') + '»? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  [loading]="eliminando()"
+  (confirmed)="confirmarEliminar()"
+  (cancelled)="confirmEliminarAbierto.set(false)"
+></confirm-dialog>

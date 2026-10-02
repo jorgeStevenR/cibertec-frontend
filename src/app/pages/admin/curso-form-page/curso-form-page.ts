@@ -13,6 +13,7 @@ import { PanelSeccion } from '../../../shared/ui/molecules/panel-seccion/panel-s
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
+import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { CursoService } from '../../../core/services/curso.service';
 import { UsuarioService } from '../../../core/services/usuario.service';
 import { ProgramaService } from '../../../core/services/programa.service';
@@ -56,6 +57,7 @@ const finNoAnteriorAInicio: ValidatorFn = (control: AbstractControl): Validation
     PanelSeccion,
     UiButton,
     UiAlert,
+    ConfirmDialog,
   ],
   templateUrl: './curso-form-page.html',
   styleUrl: './curso-form-page.scss',
@@ -78,6 +80,8 @@ export class CursoFormPage implements OnInit {
   readonly cargando = signal(true);
   readonly guardando = signal(false);
   readonly error = signal('');
+  readonly confirmEliminarAbierto = signal(false);
+  readonly eliminando = signal(false);
   // Mensajes que devolvió el backend para un campo concreto (código repetido, fechas, cupo…).
   private readonly erroresServidor = signal<Partial<Record<CampoFormulario, string>>>({});
 
@@ -259,6 +263,22 @@ export class CursoFormPage implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.guardando.set(false);
         this.mostrarErrorDelServidor(err);
+      },
+    });
+  }
+
+  confirmarEliminar(): void {
+    this.eliminando.set(true);
+    this.cursoService.eliminar(this.cursoId).subscribe({
+      next: () => {
+        this.eliminando.set(false);
+        this.confirmEliminarAbierto.set(false);
+        this.router.navigate(['/admin', 'cursos']);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminando.set(false);
+        this.confirmEliminarAbierto.set(false);
+        this.error.set(extraerMensajeError(err));
       },
     });
   }

@@ -55,7 +55,6 @@
     <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'cursos', curso.id, 'editar']">
       Editar
     </ui-button>
-    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(curso)">Eliminar</ui-button>
   </ng-template>
 </data-table>
 
@@ -65,13 +64,3 @@
   [totalElementos]="totalElementos()"
   (cambiarPagina)="cambiarPagina($event)"
 ></ui-pagination>
-
-<confirm-dialog
-  [open]="confirmEliminarAbierto()"
-  title="Eliminar curso"
-  [message]="'¿Seguro que quieres eliminar «' + (cursoAEliminar()?.titulo ?? '') + '»? Esta acción no se puede deshacer.'"
-  confirmLabel="Eliminar"
-  [loading]="eliminando()"
-  (confirmed)="confirmarEliminar()"
-  (cancelled)="confirmEliminarAbierto.set(false)"
-></confirm-dialog>

@@ -25,10 +25,8 @@
 >
   <ng-template #actions let-programa>
     <ui-button variant="secondary" [fullWidth]="false" [routerLink]="['/admin', 'programas', programa.id]">
-      Ver
+      Editar
     </ui-button>
-    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditar(programa)">Editar</ui-button>
-    <ui-button variant="danger" [fullWidth]="false" (pressed)="pedirEliminar(programa)">Eliminar</ui-button>
   </ng-template>
 </data-table>
 
@@ -39,11 +37,7 @@
   (cambiarPagina)="cambiarPagina($event)"
 ></ui-pagination>
 
-<ui-modal
-  [open]="modalAbierto()"
-  [title]="modoEdicion() ? 'Editar programa' : 'Nuevo programa'"
-  (closed)="cerrarModal()"
->
+<ui-modal [open]="modalAbierto()" title="Nuevo programa" (closed)="cerrarModal()">
   <form [formGroup]="form" (ngSubmit)="guardar()" novalidate class="modal-form">
     <form-field
       label="Nombre"
@@ -74,13 +68,3 @@
     </div>
   </form>
 </ui-modal>
-
-<confirm-dialog
-  [open]="confirmEliminarAbierto()"
-  title="Eliminar programa"
-  [message]="'¿Seguro que quieres eliminar \'' + (programaAEliminar()?.nombre ?? '') + '\'? Esta acción no se puede deshacer.'"
-  confirmLabel="Eliminar"
-  [loading]="eliminando()"
-  (confirmed)="confirmarEliminar()"
-  (cancelled)="confirmEliminarAbierto.set(false)"
-></confirm-dialog>

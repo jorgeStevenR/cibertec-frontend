@@ -13,7 +13,6 @@ import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
-import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { CursoService } from '../../../core/services/curso.service';
 import { UsuarioService } from '../../../core/services/usuario.service';
 import { ProgramaService } from '../../../core/services/programa.service';
@@ -44,7 +43,6 @@ const TAMANO_LOOKUP_PROGRAMAS = 500;
     UiButton,
     UiAlert,
     DataTable,
-    ConfirmDialog,
   ],
   templateUrl: './cursos-page.html',
   styleUrl: './cursos-page.scss',
@@ -67,10 +65,6 @@ export class CursosPage implements OnInit {
 
   readonly filtroProfesor = this.fb.control('TODOS');
   readonly filtroPrograma = this.fb.control('TODOS');
-
-  readonly confirmEliminarAbierto = signal(false);
-  readonly cursoAEliminar = signal<Curso | null>(null);
-  readonly eliminando = signal(false);
 
   readonly columnas: DataTableColumn<Curso>[] = [
     { key: 'titulo', label: 'Curso' },
@@ -160,34 +154,5 @@ export class CursosPage implements OnInit {
       { value: 'TODOS', label: 'Todos los programas' },
       ...this.programas().map((p) => ({ value: String(p.id), label: p.nombre })),
     ];
-  }
-
-  pedirEliminar(curso: Curso): void {
-    this.cursoAEliminar.set(curso);
-    this.confirmEliminarAbierto.set(true);
-  }
-
-  confirmarEliminar(): void {
-    const curso = this.cursoAEliminar();
-    if (!curso) {
-      return;
-    }
-
-    this.eliminando.set(true);
-    this.cursoService.eliminar(curso.id).subscribe({
-      next: () => {
-        this.eliminando.set(false);
-        this.confirmEliminarAbierto.set(false);
-        if (this.cursos().length === 1 && this.pagina() > 0) {
-          this.pagina.set(this.pagina() - 1);
-        }
-        this.cargar();
-      },
-      error: (err: HttpErrorResponse) => {
-        this.eliminando.set(false);
-        this.confirmEliminarAbierto.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
   }
 }

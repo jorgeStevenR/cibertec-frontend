@@ -12,7 +12,6 @@ import { Pagination } from '../../../shared/ui/molecules/pagination/pagination';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
-import { ConfirmDialog } from '../../../shared/ui/organisms/confirm-dialog/confirm-dialog';
 import { ProgramaService } from '../../../core/services/programa.service';
 import { Programa } from '../../../core/models/programa.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
@@ -33,7 +32,6 @@ const TAMANO_PAGINA = 20;
     UiButton,
     UiAlert,
     DataTable,
-    ConfirmDialog,
   ],
   templateUrl: './programas-page.html',
   styleUrl: './programas-page.scss',
@@ -53,13 +51,7 @@ export class ProgramasPage implements OnInit {
   readonly totalElementos = signal(0);
 
   readonly modalAbierto = signal(false);
-  readonly modoEdicion = signal(false);
-  readonly programaEditando = signal<Programa | null>(null);
   readonly guardando = signal(false);
-
-  readonly confirmEliminarAbierto = signal(false);
-  readonly programaAEliminar = signal<Programa | null>(null);
-  readonly eliminando = signal(false);
 
   readonly columnas: DataTableColumn<Programa>[] = [
     { key: 'nombre', label: 'Nombre' },
@@ -115,20 +107,7 @@ export class ProgramasPage implements OnInit {
   }
 
   abrirCrear(): void {
-    this.modoEdicion.set(false);
-    this.programaEditando.set(null);
     this.form.reset({ nombre: '', descripcion: '', duracionSemestres: 1 });
-    this.modalAbierto.set(true);
-  }
-
-  abrirEditar(programa: Programa): void {
-    this.modoEdicion.set(true);
-    this.programaEditando.set(programa);
-    this.form.reset({
-      nombre: programa.nombre,
-      descripcion: programa.descripcion,
-      duracionSemestres: programa.duracionSemestres,
-    });
     this.modalAbierto.set(true);
   }
 
@@ -150,11 +129,7 @@ export class ProgramasPage implements OnInit {
       descripcion: valores.descripcion ?? '',
       duracionSemestres: Number(valores.duracionSemestres),
     };
-    const editando = this.modoEdicion() ? this.programaEditando() : null;
-
-    const obs = editando ? this.programaService.actualizar(editando.id, datos) : this.programaService.crear(datos);
-
-    obs.subscribe({
+    this.programaService.crear(datos).subscribe({
       next: () => {
         this.guardando.set(false);
         this.modalAbierto.set(false);
@@ -167,32 +142,4 @@ export class ProgramasPage implements OnInit {
     });
   }
 
-  pedirEliminar(programa: Programa): void {
-    this.programaAEliminar.set(programa);
-    this.confirmEliminarAbierto.set(true);
-  }
-
-  confirmarEliminar(): void {
-    const programa = this.programaAEliminar();
-    if (!programa) {
-      return;
-    }
-
-    this.eliminando.set(true);
-    this.programaService.eliminar(programa.id).subscribe({
-      next: () => {
-        this.eliminando.set(false);
-        this.confirmEliminarAbierto.set(false);
-        if (this.programas().length === 1 && this.pagina() > 0) {
-          this.pagina.set(this.pagina() - 1);
-        }
-        this.cargar();
-      },
-      error: (err: HttpErrorResponse) => {
-        this.eliminando.set(false);
-        this.confirmEliminarAbierto.set(false);
-        this.error.set(extraerMensajeError(err));
-      },
-    });
-  }
 }

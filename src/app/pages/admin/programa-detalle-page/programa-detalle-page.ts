@@ -2,9 +2,13 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { FormField } from '../../../shared/ui/molecules/form-field/form-field';
+import { TextareaField } from '../../../shared/ui/molecules/textarea-field/textarea-field';
 import { SelectField } from '../../../shared/ui/molecules/select-field/select-field';
+import { PageHeader } from '../../../shared/ui/molecules/page-header/page-header';
+import { PanelSeccion } from '../../../shared/ui/molecules/panel-seccion/panel-seccion';
 import { UiModal } from '../../../shared/ui/molecules/ui-modal/ui-modal';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
@@ -34,7 +38,11 @@ const TAMANO_LOOKUP_CURSOS = 500;
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
+    FormField,
+    TextareaField,
     SelectField,
+    PageHeader,
+    PanelSeccion,
     UiModal,
     UiButton,
     UiAlert,
@@ -46,6 +54,7 @@ const TAMANO_LOOKUP_CURSOS = 500;
 })
 export class ProgramaDetallePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly programaService = inject(ProgramaService);
   private readonly cursoService = inject(CursoService);
   private readonly matriculaProgramaService = inject(MatriculaProgramaService);
@@ -59,6 +68,8 @@ export class ProgramaDetallePage implements OnInit {
   readonly matriculas = signal<MatriculaPrograma[]>([]);
   readonly usuarios = signal<Usuario[]>([]);
   readonly cargando = signal(false);
+  readonly cargandoCursos = signal(false);
+  readonly cargandoMatriculas = signal(false);
   readonly error = signal('');
   readonly tabActiva = signal<'cursos' | 'estudiantes'>('cursos');
 
@@ -88,28 +99,69 @@ export class ProgramaDetallePage implements OnInit {
     estudianteId: ['', [Validators.required]],
   });
 
+  readonly programaForm = this.fb.group({
+    nombre: ['', [Validators.required]],
+    descripcion: [''],
+    duracionSemestres: [1, [Validators.required, Validators.min(1)]],
+  });
+  readonly guardandoPrograma = signal(false);
+  readonly guardadoOk = signal(false);
+  readonly confirmEliminarProgramaAbierto = signal(false);
+  readonly eliminandoPrograma = signal(false);
+
   ngOnInit(): void {
-    this.cargar();
+    this.error.set('');
+    this.cargarPrograma();
+    this.cargarCursos();
+    this.cargarMatriculas();
   }
 
-  cargar(): void {
+  // Las tres cargas van por separado: el listado de cursos del backend es lento
+  // (resuelve profesor y programa curso por curso), y no debe frenar el
+  // formulario del programa ni la pestaña de estudiantes.
+  private cargarPrograma(): void {
     this.cargando.set(true);
-    this.error.set('');
-    forkJoin({
-      programa: this.programaService.obtener(this.programaId),
-      cursos: this.cursoService.listar({ programaId: this.programaId, tamano: TAMANO_LOOKUP_CURSOS }),
-      matriculas: this.matriculaProgramaService.listarPorPrograma(this.programaId),
-      usuarios: this.usuarioService.listar({ tamano: TAMANO_LOOKUP_USUARIOS }),
-    }).subscribe({
-      next: ({ programa, cursos, matriculas, usuarios }) => {
+    this.programaService.obtener(this.programaId).subscribe({
+      next: (programa) => {
         this.programa.set(programa);
-        this.cursos.set(cursos.contenido);
-        this.matriculas.set(matriculas);
-        this.usuarios.set(usuarios.contenido);
+        this.llenarFormularioPrograma(programa);
         this.cargando.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.cargando.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  private cargarCursos(): void {
+    this.cargandoCursos.set(true);
+    this.cursoService.listar({ programaId: this.programaId, tamano: TAMANO_LOOKUP_CURSOS }).subscribe({
+      next: (cursos) => {
+        this.cursos.set(cursos.contenido);
+        this.cargandoCursos.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cargandoCursos.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // Matrículas y usuarios van juntos: los usuarios resuelven los nombres de la tabla.
+  private cargarMatriculas(): void {
+    this.cargandoMatriculas.set(true);
+    forkJoin({
+      matriculas: this.matriculaProgramaService.listarPorPrograma(this.programaId),
+      usuarios: this.usuarioService.listar({ tamano: TAMANO_LOOKUP_USUARIOS }),
+    }).subscribe({
+      next: ({ matriculas, usuarios }) => {
+        this.matriculas.set(matriculas);
+        this.usuarios.set(usuarios.contenido);
+        this.cargandoMatriculas.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cargandoMatriculas.set(false);
         this.error.set(extraerMensajeError(err));
       },
     });
@@ -125,6 +177,62 @@ export class ProgramaDetallePage implements OnInit {
     return this.usuarios()
       .filter((u) => u.rol === 'ESTUDIANTE' && !matriculadosIds.has(u.id))
       .map((u) => ({ value: String(u.id), label: `${u.nombre} ${u.apellido}` }));
+  }
+
+  // --- Datos del programa ---
+
+  private llenarFormularioPrograma(programa: Programa): void {
+    this.programaForm.reset({
+      nombre: programa.nombre,
+      descripcion: programa.descripcion,
+      duracionSemestres: programa.duracionSemestres,
+    });
+  }
+
+  guardarPrograma(): void {
+    if (this.programaForm.invalid) {
+      this.programaForm.markAllAsTouched();
+      return;
+    }
+
+    this.guardandoPrograma.set(true);
+    this.guardadoOk.set(false);
+    this.error.set('');
+    const valores = this.programaForm.getRawValue();
+    this.programaService
+      .actualizar(this.programaId, {
+        nombre: valores.nombre!,
+        descripcion: valores.descripcion ?? '',
+        duracionSemestres: Number(valores.duracionSemestres),
+      })
+      .subscribe({
+        next: (programa) => {
+          this.guardandoPrograma.set(false);
+          this.programa.set(programa);
+          this.llenarFormularioPrograma(programa);
+          this.guardadoOk.set(true);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoPrograma.set(false);
+          this.error.set(extraerMensajeError(err));
+        },
+      });
+  }
+
+  confirmarEliminarPrograma(): void {
+    this.eliminandoPrograma.set(true);
+    this.programaService.eliminar(this.programaId).subscribe({
+      next: () => {
+        this.eliminandoPrograma.set(false);
+        this.confirmEliminarProgramaAbierto.set(false);
+        this.router.navigate(['/admin', 'programas']);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoPrograma.set(false);
+        this.confirmEliminarProgramaAbierto.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
   }
 
   // --- Matrículas ---
@@ -152,7 +260,7 @@ export class ProgramaDetallePage implements OnInit {
         next: () => {
           this.matriculando.set(false);
           this.matriculaModalAbierto.set(false);
-          this.cargar();
+          this.cargarMatriculas();
         },
         error: (err: HttpErrorResponse) => {
           this.matriculando.set(false);
@@ -177,7 +285,7 @@ export class ProgramaDetallePage implements OnInit {
       next: () => {
         this.eliminandoMatricula.set(false);
         this.confirmEliminarMatriculaAbierto.set(false);
-        this.cargar();
+        this.cargarMatriculas();
       },
       error: (err: HttpErrorResponse) => {
         this.eliminandoMatricula.set(false);
