@@ -15,7 +15,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DataTable, DataTableColumn } from '../data-table/data-table';
+import { DataTable, DataTableCellDirective, DataTableColumn } from '../data-table/data-table';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { FormField } from '../../molecules/form-field/form-field';
 import { TextareaField } from '../../molecules/textarea-field/textarea-field';
@@ -50,7 +50,7 @@ const NO_VACIO = Validators.pattern(/\S/);
 @Component({
   selector: 'app-cuestionario-editor',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DataTable, ConfirmDialog, FormField, TextareaField],
+  imports: [CommonModule, ReactiveFormsModule, DataTable, DataTableCellDirective, ConfirmDialog, FormField, TextareaField],
   templateUrl: './cuestionario-editor.html',
   styleUrl: './cuestionario-editor.scss',
 })

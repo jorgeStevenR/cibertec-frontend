@@ -358,11 +358,27 @@ próxima sesión antes de dar por cerrado.
   `cursos/resumen`, `vencimientos` y `calificaciones` responden 200 con los
   valores esperados (camila.rojas 44 %, andres.pardo 22 % y 19/30,
   valentina.cruz 0 % y 0/0; el curso borrador 19 no aparece).
-- Notado en el backend (sin tocarlo): `POST /modulos/{id}/cuestionarios` y
-  `GET /cuestionarios/{id}` no devuelven `fechaApertura`, `fechaEntrega` ni
-  `tiempoLimiteMinutos` cuando son null (los omite). El front los tipa
-  `| null` y lo tolera; sigue abierto el punto de "Pendiente" sobre si esos
-  campos se persisten.
+- `fechaApertura`, `fechaEntrega` y `tiempoLimiteMinutos` no vienen en la
+  respuesta del cuestionario cuando son null: **no es un bug**,
+  `CuestionarioResponseDTO` tiene `@JsonInclude(NON_NULL)`. El front los tipa
+  `| null` y lo tolera.
+- **Bug encontrado en el navegador (Claude en Chrome)**: en Resultados la
+  columna Estado mostraba `PENDIENTE_REVISION` crudo y no aparecía el botón
+  "Calificar" → el profesor no podía calificar abiertas desde la UI.
+  Causa: `cuestionario-editor` usaba `<ng-template dataTableCell>` sin
+  importar `DataTableCellDirective`; Angular lo ignora sin error y la tabla
+  cae al texto plano. Mismo bug en `admin/cursos-page` (título-enlace,
+  fechas y cupo no se veían). Corregido en los dos. **Ojo al usar
+  `dataTableCell`: importar siempre `DataTableCellDirective` junto con
+  `DataTable`** — ni el build ni los tests lo detectan. Las pruebas por API
+  no podían encontrarlo: confirma que la verificación visual sigue haciendo
+  falta.
+- Pedido del usuario para después (no implementado todavía): notas en escala
+  0,0–5,0 calculadas por el **backend** (`notaSobre5`, sin dejar de guardar
+  puntos), opción del profesor `mostrarNota` (si está apagada, al finalizar
+  el estudiante solo ve una confirmación; se puede encender después) y
+  responder **una pregunta por pantalla** con Anterior/Siguiente, grilla de
+  números y "Finalizar". Se le entregó al usuario el prompt del backend.
 
 ### 2026-09-30
 - Backend apagado: no se pudieron verificar los endpoints del estudiante (sigue

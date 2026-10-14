@@ -12,7 +12,7 @@ import { Pagination } from '../../../shared/ui/molecules/pagination/pagination';
 import { UiButton } from '../../../shared/ui/atoms/ui-button/ui-button';
 import { UiAlert } from '../../../shared/ui/atoms/ui-alert/ui-alert';
 import { UiSelectOption } from '../../../shared/ui/atoms/ui-select/ui-select';
-import { DataTable, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
+import { DataTable, DataTableCellDirective, DataTableColumn } from '../../../shared/ui/organisms/data-table/data-table';
 import { CursoService } from '../../../core/services/curso.service';
 import { UsuarioService } from '../../../core/services/usuario.service';
 import { ProgramaService } from '../../../core/services/programa.service';
@@ -43,6 +43,7 @@ const TAMANO_LOOKUP_PROGRAMAS = 500;
     UiButton,
     UiAlert,
     DataTable,
+    DataTableCellDirective,
   ],
   templateUrl: './cursos-page.html',
   styleUrl: './cursos-page.scss',
