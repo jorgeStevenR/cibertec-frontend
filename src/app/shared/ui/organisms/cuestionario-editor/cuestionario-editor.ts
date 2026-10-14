@@ -362,6 +362,12 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
     return null;
   }
 
+  // El error se muestra recién cuando hay algo escrito: un campo vacío solo
+  // deshabilita "Calificar", sin marcarlo en rojo apenas se abre la revisión.
+  errorPuntajeVisible(pregunta: PreguntaConRespuesta): string | null {
+    return (this.puntajesEditados()[pregunta.id] ?? '').trim() === '' ? null : this.errorPuntaje(pregunta);
+  }
+
   guardarPuntaje(pregunta: PreguntaConRespuesta): void {
     const intento = this.intentoRevision();
     const valor = leerPuntaje(this.puntajesEditados()[pregunta.id] ?? '');

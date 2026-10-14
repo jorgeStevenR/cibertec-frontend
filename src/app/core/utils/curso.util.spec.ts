@@ -6,6 +6,7 @@ import {
   datosAcademicosCompletos,
   estadoCupo,
   formatearRangoFechas,
+  programasDeCursos,
   rangoFechasValido,
   textoCupo,
 } from './curso.util';
@@ -161,5 +162,29 @@ describe('datosAcademicosCompletos', () => {
 
   it('el cupo vacío no cuenta como dato faltante', () => {
     expect(datosAcademicosCompletos({ ...base, cupoMaximo: null })).toBe(true);
+  });
+});
+
+describe('programasDeCursos', () => {
+  const curso = (programaId: number | null, programaNombre: string | null) => ({ programaId, programaNombre });
+
+  it('devuelve cada programa una sola vez, ordenado por nombre', () => {
+    expect(programasDeCursos([curso(2, 'Software'), curso(1, 'Redes'), curso(2, 'Software')])).toEqual([
+      { id: 1, nombre: 'Redes' },
+      { id: 2, nombre: 'Software' },
+    ]);
+  });
+
+  it('ignora los cursos sin programa', () => {
+    expect(programasDeCursos([curso(null, null), curso(3, 'Diseño')])).toEqual([{ id: 3, nombre: 'Diseño' }]);
+  });
+
+  it('usa "Programa #id" si falta el nombre, salvo que otro curso lo traiga', () => {
+    expect(programasDeCursos([curso(4, null)])).toEqual([{ id: 4, nombre: 'Programa #4' }]);
+    expect(programasDeCursos([curso(4, null), curso(4, 'Datos')])).toEqual([{ id: 4, nombre: 'Datos' }]);
+  });
+
+  it('sin cursos no hay programas', () => {
+    expect(programasDeCursos([])).toEqual([]);
   });
 });

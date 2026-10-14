@@ -19,6 +19,7 @@ import { MatriculaProgramaService } from '../../../core/services/matricula-progr
 import { Usuario } from '../../../core/models/usuario.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { ROL_LABELS, formatearFecha } from '../../../core/utils/labels.util';
+import { programasDeCursos } from '../../../core/utils/curso.util';
 
 interface ItemPertenencia {
   id: number;
@@ -30,6 +31,19 @@ interface ItemPertenencia {
 // se piden "todos" para poder resolver el nombre a partir del cursoId/programaId
 // que devuelve la matrícula (que no trae el nombre incluido).
 const TAMANO_LOOKUP = 500;
+
+// Un 403 es esperable (ej. GESTOR_USUARIOS no puede ver matrículas): se explica
+// como falta de permiso, no como un error de carga.
+interface AvisoPertenencia {
+  mensaje: string;
+  sinPermiso: boolean;
+}
+
+function avisoPertenencia(err: HttpErrorResponse, que: string): AvisoPertenencia {
+  return err.status === 403
+    ? { mensaje: `Tu rol no tiene permiso para ver ${que} de este usuario.`, sinPermiso: true }
+    : { mensaje: `No se pudieron cargar ${que} — intenta recargar la página.`, sinPermiso: false };
+}
 
 @Component({
   selector: 'app-usuario-detalle-page',
@@ -89,7 +103,9 @@ export class UsuarioDetallePage implements OnInit {
   readonly cursosPertenece = signal<ItemPertenencia[]>([]);
   readonly programasPertenece = signal<ItemPertenencia[]>([]);
   readonly cargandoPertenencia = signal(false);
-  readonly pertenenciaError = signal(false);
+  // Aviso por columna (null = se cargó bien): un fallo en una no oculta la otra.
+  readonly cursosAviso = signal<AvisoPertenencia | null>(null);
+  readonly programasAviso = signal<AvisoPertenencia | null>(null);
 
   readonly formatearFecha = formatearFecha;
 
@@ -141,12 +157,14 @@ export class UsuarioDetallePage implements OnInit {
     });
   }
 
-  // No crítico para el resto de la pantalla: si falla, se muestra un aviso acá
-  // mismo (pertenenciaError) en vez de tumbar la carga del usuario.
+  // No crítico para el resto de la pantalla: cada llamada maneja su propio error
+  // y lo muestra en su columna (cursosAviso/programasAviso), así un 403 en las
+  // matrículas no tumba la carga del usuario ni la otra columna.
   private cargarPertenencia(usuario: Usuario): void {
     this.cursosPertenece.set([]);
     this.programasPertenece.set([]);
-    this.pertenenciaError.set(false);
+    this.cursosAviso.set(null);
+    this.programasAviso.set(null);
 
     if (usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'GESTOR_USUARIOS') {
       return;
@@ -160,7 +178,9 @@ export class UsuarioDetallePage implements OnInit {
         .pipe(
           catchError((err: HttpErrorResponse) => {
             console.error(`Fallo al cargar los cursos del profesor ${usuario.id}`, err);
-            this.pertenenciaError.set(true);
+            const aviso = avisoPertenencia(err, 'los cursos');
+            this.cursosAviso.set(aviso);
+            this.programasAviso.set(aviso);
             return of(null);
           }),
         )
@@ -172,43 +192,58 @@ export class UsuarioDetallePage implements OnInit {
           this.cursosPertenece.set(
             cursos.contenido.map((c) => ({ id: c.id, nombre: c.titulo, meta: c.programaNombre ?? undefined })),
           );
+          // El profesor no tiene matrícula a programas: pertenece a los programas de los cursos que dicta.
+          this.programasPertenece.set(programasDeCursos(cursos.contenido));
         });
       return;
     }
 
+    // Los listados de cursos/programas solo sirven para resolver nombres: si
+    // fallan, se muestra "Curso #id" en vez de perder las matrículas.
     forkJoin({
-      matriculas: this.matriculaService.listarPorEstudiante(usuario.id),
-      matriculasPrograma: this.matriculaProgramaService.listarPorEstudiante(usuario.id),
-      cursos: this.cursoService.listar({ tamano: TAMANO_LOOKUP }),
-      programas: this.programaService.listar({ tamano: TAMANO_LOOKUP }),
-    })
-      .pipe(
+      matriculas: this.matriculaService.listarPorEstudiante(usuario.id).pipe(
         catchError((err: HttpErrorResponse) => {
-          console.error(`Fallo al cargar la pertenencia del estudiante ${usuario.id}`, err);
-          this.pertenenciaError.set(true);
+          console.error(`Fallo al cargar las matrículas a cursos del estudiante ${usuario.id}`, err);
+          this.cursosAviso.set(avisoPertenencia(err, 'las matrículas a cursos'));
+          return of([]);
+        }),
+      ),
+      matriculasPrograma: this.matriculaProgramaService.listarPorEstudiante(usuario.id).pipe(
+        catchError((err: HttpErrorResponse) => {
+          console.error(`Fallo al cargar las matrículas a programas del estudiante ${usuario.id}`, err);
+          this.programasAviso.set(avisoPertenencia(err, 'las matrículas a programas'));
+          return of([]);
+        }),
+      ),
+      cursos: this.cursoService.listar({ tamano: TAMANO_LOOKUP }).pipe(
+        catchError((err: HttpErrorResponse) => {
+          console.error('Fallo al cargar los nombres de los cursos', err);
           return of(null);
         }),
-      )
-      .subscribe((resultado) => {
-        this.cargandoPertenencia.set(false);
-        if (!resultado) {
-          return;
-        }
-        const cursosPorId = new Map(resultado.cursos.contenido.map((c) => [c.id, c.titulo]));
-        const programasPorId = new Map(resultado.programas.contenido.map((p) => [p.id, p.nombre]));
-        this.cursosPertenece.set(
-          resultado.matriculas.map((m) => ({
-            id: m.cursoId,
-            nombre: cursosPorId.get(m.cursoId) ?? `Curso #${m.cursoId}`,
-          })),
-        );
-        this.programasPertenece.set(
-          resultado.matriculasPrograma.map((m) => ({
-            id: m.programaId,
-            nombre: programasPorId.get(m.programaId) ?? `Programa #${m.programaId}`,
-          })),
-        );
-      });
+      ),
+      programas: this.programaService.listar({ tamano: TAMANO_LOOKUP }).pipe(
+        catchError((err: HttpErrorResponse) => {
+          console.error('Fallo al cargar los nombres de los programas', err);
+          return of(null);
+        }),
+      ),
+    }).subscribe((resultado) => {
+      this.cargandoPertenencia.set(false);
+      const cursosPorId = new Map((resultado.cursos?.contenido ?? []).map((c) => [c.id, c.titulo]));
+      const programasPorId = new Map((resultado.programas?.contenido ?? []).map((p) => [p.id, p.nombre]));
+      this.cursosPertenece.set(
+        resultado.matriculas.map((m) => ({
+          id: m.cursoId,
+          nombre: cursosPorId.get(m.cursoId) ?? `Curso #${m.cursoId}`,
+        })),
+      );
+      this.programasPertenece.set(
+        resultado.matriculasPrograma.map((m) => ({
+          id: m.programaId,
+          nombre: programasPorId.get(m.programaId) ?? `Programa #${m.programaId}`,
+        })),
+      );
+    });
   }
 
   iniciales(usuario: Usuario): string {

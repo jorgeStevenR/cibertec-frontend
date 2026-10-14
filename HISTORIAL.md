@@ -166,23 +166,16 @@ este repo).
 
 ## En progreso
 
-**Probar en el navegador los tipos de pregunta (2026-10-14).** La API se probó
-de punta a punta con llamadas directas (profesor `marco.aguilar`, estudiante
-`camila.torres`, curso 31, contraseña `Sim12345!`) y el frontend compila y
-pasa los tests, pero la UI no se recorrió todavía: crear una pregunta de cada
-tipo, responder como estudiante (chip "Enviado · nota en revisión"),
-calificar la abierta desde Resultados y ver que la nota aparezca en la
-revisión del estudiante y en Calificaciones ("En revisión" → "Rendido").
-Revisar también en un viewport angosto (mobile).
-
-**Verificar los 3 endpoints del estudiante contra el backend reiniciado.** El
-2026-09-18 el proceso del puerto 8080 arrancó antes de compilar el controlador
-nuevo (`EstudianteAvanceController`), por lo que `/api/estudiantes/...` daba 500
-"Ocurrió un error inesperado" (igual que cualquier ruta inexistente: el backend
-convierte "sin handler" en 500 en vez de 404). Reiniciar con `mvnw.cmd
-spring-boot:run` y comprobar con las cuentas de prueba (camila.rojas 44% y
-35/40, andres.pardo 22% y 19/30, valentina.cruz 0% y 0/0, contraseña
-`Sim12345!`, curso 18; el curso borrador 19 no debe aparecer).
+**Recorrer en el navegador los tipos de pregunta (2026-10-14).** La API y el
+código ya se verificaron (ver log del 2026-10-14); falta solo lo **visual**:
+V/F con dos opciones fijas, tipo fijo al editar, "Enviar" deshabilitado
+hasta responder todo, chip "Enviado · nota en revisión", "Por revisar" →
+"Calificado" en Resultados, el mensaje de puntaje fuera de rango, viewport
+angosto (~375 px) y teclado (Escape en la revisión vuelve a Resultados, otro
+Escape cierra; el foco vuelve al disparador). Lo mismo para la ficha de
+usuario del gestor (avisos de permiso por columna, programas del profesor).
+Cuentas: `marco.aguilar`/`camila.torres` (`Sim12345!`), curso 31; nombrar
+"PRUEBA …" lo que se cree y borrarlo.
 
 Aparte de eso, nada a medio terminar — punto de corte limpio. El rol
 GESTOR_USUARIOS (guard, panel nuevo, `UsuariosPage`/`UsuarioDetallePage`
@@ -336,12 +329,40 @@ próxima sesión antes de dar por cerrado.
   `cuestionario-responder` suma el cuadro de texto, la nota "pendiente" y el
   puntaje por abierta. Funciones puras nuevas en `cuestionario.util.ts`
   (`leerPuntaje`, estado `en-revision`) con tests.
-- Bugs detectados en el recorrido del gestor (sin corregir todavía):
-  `usuario-detalle-page` pide matrículas de un estudiante con `forkJoin` y el
-  backend responde 403 al GESTOR_USUARIOS, lo que tumba toda la sección de
-  pertenencia; para un PROFESOR nunca se llena `programasPertenece`, por eso
-  dice "no pertenece a ningún programa" (se puede derivar de `programaNombre`
-  de sus cursos).
+- Bugs del recorrido del gestor, **corregidos** en `usuario-detalle-page`:
+  - Estudiante: las 4 llamadas de `cargarPertenencia()` tienen cada una su
+    `catchError`. El 403 del backend al GESTOR_USUARIOS en
+    `/matriculas/estudiante/{id}` y `/matriculas-programa/estudiante/{id}` (a
+    propósito, no se tocaron permisos) ya no tumba la sección: cada columna
+    muestra su aviso ("Tu rol no tiene permiso para ver…", en gris; otros
+    errores en rojo). Si fallan los listados de nombres, se muestra
+    "Curso #id"/"Programa #id". Verificado con curl: gestor → 403 en las dos de
+    matrículas, 200 en `/cursos` y `/programas`.
+  - Profesor: los programas se derivan de sus cursos con
+    `programasDeCursos()` (`core/utils/curso.util.ts`, sin repetir, ordenado,
+    con tests). No pide nada nuevo al backend.
+- Tipos de pregunta **verificados contra la API** (no en el navegador: la
+  sesión no tenía control del navegador). Con `marco.aguilar`/`camila.torres`,
+  curso 31, módulo 37: cuestionario "PRUEBA tipos" con OM, V/F y abierta (201),
+  cambiar el tipo → 409, editar V/F → 200, el estudiante no recibe
+  `esCorrecta`, enviar → `PENDIENTE_REVISION` con `nota` null, Calificaciones
+  → `ENTREGADA` sin nota, calificar 2 sobre 1 → 409, -1 → 400, 0.5 → 200 y el
+  intento pasa a `CALIFICADO` (2,5/4), el estudiante ve la nota y
+  Calificaciones → `RENDIDO`. Todo coincide con lo que espera el código del
+  front. Se borró el cuestionario (intento incluido, 404 después).
+- Bug corregido en `cuestionario-editor`: con un puntaje fuera de rango
+  "Calificar" se deshabilitaba pero el mensaje de error nunca se mostraba.
+  Ahora aparece debajo del campo (con `role="alert"` y `aria-describedby`),
+  solo cuando hay algo escrito.
+- Endpoints del estudiante verificados (pendiente desde el 2026-09-18):
+  `cursos/resumen`, `vencimientos` y `calificaciones` responden 200 con los
+  valores esperados (camila.rojas 44 %, andres.pardo 22 % y 19/30,
+  valentina.cruz 0 % y 0/0; el curso borrador 19 no aparece).
+- Notado en el backend (sin tocarlo): `POST /modulos/{id}/cuestionarios` y
+  `GET /cuestionarios/{id}` no devuelven `fechaApertura`, `fechaEntrega` ni
+  `tiempoLimiteMinutos` cuando son null (los omite). El front los tipa
+  `| null` y lo tolera; sigue abierto el punto de "Pendiente" sobre si esos
+  campos se persisten.
 
 ### 2026-09-30
 - Backend apagado: no se pudieron verificar los endpoints del estudiante (sigue

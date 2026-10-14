@@ -79,14 +79,13 @@
 
     <p *ngIf="cargandoPertenencia()" class="state-msg">Cargando…</p>
 
-    <p *ngIf="pertenenciaError()" class="empty-msg empty-msg-error">
-      No se pudo cargar esta información — intenta recargar la página.
-    </p>
-
-    <div class="pertenencia-grid" *ngIf="!cargandoPertenencia() && !pertenenciaError()">
+    <div class="pertenencia-grid" *ngIf="!cargandoPertenencia()">
       <div class="pertenencia-col">
         <h3>Programas</h3>
-        <p class="empty-msg" *ngIf="programasPertenece().length === 0">Todavía no pertenece a ningún programa.</p>
+        <p class="empty-msg" *ngIf="programasAviso() as aviso" [class.empty-msg-error]="!aviso.sinPermiso">{{ aviso.mensaje }}</p>
+        <p class="empty-msg" *ngIf="!programasAviso() && programasPertenece().length === 0">
+          Todavía no pertenece a ningún programa.
+        </p>
         <ul class="pertenencia-list" *ngIf="programasPertenece().length > 0">
           <li *ngFor="let p of programasPertenece()">{{ p.nombre }}</li>
         </ul>
@@ -94,7 +93,10 @@
 
       <div class="pertenencia-col">
         <h3>Cursos</h3>
-        <p class="empty-msg" *ngIf="cursosPertenece().length === 0">Todavía no pertenece a ningún curso.</p>
+        <p class="empty-msg" *ngIf="cursosAviso() as aviso" [class.empty-msg-error]="!aviso.sinPermiso">{{ aviso.mensaje }}</p>
+        <p class="empty-msg" *ngIf="!cursosAviso() && cursosPertenece().length === 0">
+          Todavía no pertenece a ningún curso.
+        </p>
         <ul class="pertenencia-list" *ngIf="cursosPertenece().length > 0">
           <li *ngFor="let c of cursosPertenece()">
             <span>{{ c.nombre }}</span>

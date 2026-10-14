@@ -230,8 +230,10 @@
                   type="text"
                   inputmode="decimal"
                   [value]="puntajesEditados()[p.id] ?? ''"
-                  [attr.aria-invalid]="!!errorPuntaje(p)"
-                  [attr.aria-describedby]="'cq-puntaje-ayuda-' + p.id"
+                  [attr.aria-invalid]="!!errorPuntajeVisible(p)"
+                  [attr.aria-describedby]="
+                    (errorPuntajeVisible(p) ? 'cq-puntaje-error-' + p.id + ' ' : '') + 'cq-puntaje-ayuda-' + p.id
+                  "
                   (input)="editarPuntaje(p.id, $any($event.target).value)"
                   (keydown.enter)="guardarPuntaje(p)"
                 />
@@ -244,6 +246,9 @@
                   {{ guardandoPuntajeDe() === p.id ? 'Guardando…' : p.puntajeObtenido === null ? 'Calificar' : 'Actualizar' }}
                 </button>
               </div>
+              <p *ngIf="errorPuntajeVisible(p) as mensaje" [id]="'cq-puntaje-error-' + p.id" class="cq-error-campo cq-error-puntaje" role="alert">
+                {{ mensaje }}
+              </p>
               <p [id]="'cq-puntaje-ayuda-' + p.id" class="cq-calificar-ayuda">
                 <ng-container *ngIf="p.puntajeObtenido !== null; else sinCalificar">
                   Calificada con {{ formatearPuntaje(p.puntajeObtenido) }} de {{ p.puntaje }}.

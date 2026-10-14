@@ -95,3 +95,28 @@ export function campoDeMensajeCurso(mensaje: string): CampoCursoConError | null 
   }
   return null;
 }
+
+export interface ProgramaDeCurso {
+  id: number;
+  nombre: string;
+}
+
+// Programas a los que pertenecen unos cursos (ej. los que dicta un profesor), sin
+// repetir y ordenados por nombre. Los cursos sin programa se ignoran; si el
+// backend no manda el nombre, se usa "Programa #id" para no perder el dato.
+export function programasDeCursos(
+  cursos: readonly Pick<Curso, 'programaId' | 'programaNombre'>[],
+): ProgramaDeCurso[] {
+  const porId = new Map<number, string>();
+  for (const curso of cursos) {
+    if (curso.programaId === null) {
+      continue;
+    }
+    if (!porId.get(curso.programaId)) {
+      porId.set(curso.programaId, curso.programaNombre ?? '');
+    }
+  }
+  return [...porId]
+    .map(([id, nombre]) => ({ id, nombre: nombre || `Programa #${id}` }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
