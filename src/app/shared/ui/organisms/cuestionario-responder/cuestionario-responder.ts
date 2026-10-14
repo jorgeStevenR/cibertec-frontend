@@ -16,9 +16,9 @@ import {
 } from '@angular/core';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { CuestionarioService } from '../../../../core/services/cuestionario.service';
-import { CuestionarioDetalle, IntentoDetalle } from '../../../../core/models/cuestionario.model';
+import { CuestionarioDetalle, IntentoDetalle, RespuestaEnvio } from '../../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../../core/utils/http-error.util';
-import { formatearFecha } from '../../../../core/utils/labels.util';
+import { formatearFecha, formatearPuntaje } from '../../../../core/utils/labels.util';
 
 @Component({
   selector: 'app-cuestionario-responder',
@@ -42,6 +42,9 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
   private readonly focoPrevio = this.documento.activeElement as HTMLElement | null;
 
   readonly formatearFecha = formatearFecha;
+  readonly formatearPuntaje = formatearPuntaje;
+  // Mismo tope que valida el backend para una respuesta abierta.
+  readonly maxCaracteresAbierta = 5000;
 
   readonly cargando = signal(false);
   readonly error = signal('');
@@ -49,7 +52,9 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
   readonly cuestionario = signal<CuestionarioDetalle | null>(null);
   readonly miIntento = signal<IntentoDetalle | null>(null);
 
+  // Opción elegida en cada pregunta cerrada y texto escrito en cada abierta, por id de pregunta.
   readonly respuestas = signal<Record<number, number>>({});
+  readonly textos = signal<Record<number, string>>({});
   readonly confirmEnviarAbierto = signal(false);
   readonly enviando = signal(false);
 
@@ -110,6 +115,14 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
     this.respuestas.set({ ...this.respuestas(), [preguntaId]: opcionId });
   }
 
+  escribirRespuesta(preguntaId: number, texto: string): void {
+    this.textos.set({ ...this.textos(), [preguntaId]: texto });
+  }
+
+  tieneAbiertas(): boolean {
+    return this.cuestionario()?.preguntas.some((p) => p.tipo === 'ABIERTA') ?? false;
+  }
+
   totalPreguntas(): number {
     return this.cuestionario()?.preguntas.length ?? 0;
   }
@@ -134,8 +147,11 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
     return !!c && !this.estaDisponible() && c.preguntas.length > 0;
   }
 
+  // Una abierta cuenta como respondida si tiene texto que no sea solo espacios.
   totalRespondidas(): number {
-    return Object.keys(this.respuestas()).length;
+    const cerradas = Object.keys(this.respuestas()).length;
+    const abiertas = Object.values(this.textos()).filter((t) => t.trim() !== '').length;
+    return cerradas + abiertas;
   }
 
   puedeEnviar(): boolean {
@@ -156,10 +172,12 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
     }
     this.enviando.set(true);
     this.error.set('');
-    const respuestas = Object.entries(this.respuestas()).map(([preguntaId, opcionId]) => ({
-      preguntaId: Number(preguntaId),
-      opcionId,
-    }));
+    const respuestas: RespuestaEnvio[] = [
+      ...Object.entries(this.respuestas()).map(([preguntaId, opcionId]) => ({ preguntaId: Number(preguntaId), opcionId })),
+      ...Object.entries(this.textos())
+        .filter(([, texto]) => texto.trim() !== '')
+        .map(([preguntaId, texto]) => ({ preguntaId: Number(preguntaId), texto: texto.trim() })),
+    ];
     this.cuestionarioService.enviarIntento(this.cuestionarioId, respuestas).subscribe({
       next: (intento) => {
         this.enviando.set(false);

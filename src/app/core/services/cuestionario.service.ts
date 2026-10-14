@@ -59,6 +59,18 @@ export class CuestionarioService {
     });
   }
 
+  // Detalle de un intento para el profesor (con la nota parcial si está en revisión).
+  obtenerIntento(intentoId: number): Observable<IntentoDetalle> {
+    return this.http.get<IntentoDetalle>(`${API_BASE_URL}/intentos/${intentoId}`);
+  }
+
+  // Puntaje de una respuesta abierta, entre 0 y el puntaje de la pregunta.
+  calificarRespuesta(intentoId: number, preguntaId: number, puntaje: number): Observable<IntentoDetalle> {
+    return this.http.patch<IntentoDetalle>(`${API_BASE_URL}/intentos/${intentoId}/preguntas/${preguntaId}/calificar`, {
+      puntaje,
+    });
+  }
+
   obtenerMiIntento(cuestionarioId: number): Observable<IntentoDetalle | null> {
     return this.http.get<IntentoDetalle>(`${API_BASE_URL}/cuestionarios/${cuestionarioId}/mi-intento`).pipe(
       catchError((err: HttpErrorResponse) => (err.status === 404 ? of(null) : throwError(() => err))),

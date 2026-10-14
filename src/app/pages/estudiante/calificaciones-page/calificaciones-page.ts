@@ -71,7 +71,12 @@ export class EstudianteCalificacionesPage implements OnInit {
     return TIPO_ITEM_LABELS[item.tipo];
   }
 
+  // Un cuestionario "entregado" es uno con respuestas abiertas que el profesor
+  // todavía no calificó: "En revisión" lo explica mejor que "Entregada".
   etiquetaEstado(item: CalificacionItem): string {
+    if (item.tipo === 'CUESTIONARIO' && item.estado === 'ENTREGADA') {
+      return 'En revisión';
+    }
     return ESTADO_CALIFICACION_LABELS[item.estado];
   }
 

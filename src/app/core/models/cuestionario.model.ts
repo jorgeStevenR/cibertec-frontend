@@ -25,6 +25,13 @@ export interface CuestionarioRequest {
   tiempoLimiteMinutos: number | null;
 }
 
+// OPCION_MULTIPLE y VERDADERO_FALSO se corrigen solas; ABIERTA la califica el
+// profesor a mano. Verdadero/falso es una opción múltiple de dos opciones fijas.
+export type TipoPregunta = 'OPCION_MULTIPLE' | 'VERDADERO_FALSO' | 'ABIERTA';
+
+// PENDIENTE_REVISION: tiene respuestas abiertas que el profesor todavía no calificó.
+export type EstadoIntento = 'CALIFICADO' | 'PENDIENTE_REVISION';
+
 export interface Opcion {
   id: number;
   texto: string;
@@ -41,13 +48,16 @@ export interface OpcionRequest {
 export interface Pregunta {
   id: number;
   cuestionarioId: number;
+  tipo: TipoPregunta;
   enunciado: string;
   puntaje: number;
   orden: number;
+  // Vacío en preguntas ABIERTA.
   opciones: Opcion[];
 }
 
 export interface PreguntaRequest {
+  tipo: TipoPregunta;
   enunciado: string;
   puntaje: number;
   opciones: OpcionRequest[];
@@ -57,9 +67,11 @@ export interface CuestionarioDetalle extends Cuestionario {
   preguntas: Pregunta[];
 }
 
+// Cerradas: { preguntaId, opcionId }. Abiertas: { preguntaId, texto }.
 export interface RespuestaEnvio {
   preguntaId: number;
-  opcionId: number;
+  opcionId?: number;
+  texto?: string;
 }
 
 export interface IntentoResumen {
@@ -68,8 +80,10 @@ export interface IntentoResumen {
   estudianteId: number;
   estudianteNombre: string | null;
   estudianteEmail: string | null;
+  // Al profesor siempre le llega (parcial si el intento está PENDIENTE_REVISION).
   nota: number;
   puntajeMaximo: number;
+  estado: EstadoIntento;
   fechaEntrega: string;
 }
 
@@ -81,11 +95,18 @@ export interface OpcionCalificada extends Omit<Opcion, 'esCorrecta'> {
   esCorrecta: boolean;
 }
 
-export interface PreguntaConRespuesta extends Omit<Pregunta, 'opciones'> {
+// Lo que respondió el estudiante: la opción elegida (cerradas) o el texto y el
+// puntaje que le dio el profesor (abiertas). null = sin responder / sin calificar.
+export interface PreguntaConRespuesta extends Omit<Pregunta, 'opciones' | 'cuestionarioId'> {
   opciones: OpcionCalificada[];
-  opcionElegidaId: number;
+  opcionElegidaId: number | null;
+  textoRespuesta: string | null;
+  puntajeObtenido: number | null;
 }
 
-export interface IntentoDetalle extends IntentoResumen {
+export interface IntentoDetalle extends Omit<IntentoResumen, 'nota'> {
+  // null cuando se le muestra al estudiante un intento PENDIENTE_REVISION: el
+  // backend no manda la nota parcial.
+  nota: number | null;
   preguntas: PreguntaConRespuesta[];
 }

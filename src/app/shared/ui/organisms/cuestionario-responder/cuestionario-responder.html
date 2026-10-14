@@ -12,14 +12,31 @@
 
     <!-- Ya respondió: mostrar revisión -->
     <div class="cr-body" *ngIf="!cargando() && miIntento() as intento">
-      <div class="cr-nota-final">
-        Tu nota: <strong>{{ intento.nota }} / {{ intento.puntajeMaximo }}</strong>
+      <div class="cr-nota-final" *ngIf="intento.nota !== null; else notaPendiente">
+        Tu nota: <strong>{{ formatearPuntaje(intento.nota) }} / {{ formatearPuntaje(intento.puntajeMaximo) }}</strong>
       </div>
+      <ng-template #notaPendiente>
+        <div class="cr-nota-final cr-nota-pendiente">
+          Tus respuestas se enviaron. <strong>Tu nota está pendiente</strong>: el profesor todavía tiene que calificar
+          las preguntas abiertas.
+        </div>
+      </ng-template>
 
       <ul class="cr-preguntas-list">
         <li *ngFor="let p of intento.preguntas">
           <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
-          <ul class="cr-opciones-list">
+          <ng-container *ngIf="p.tipo === 'ABIERTA'">
+            <!-- prettier-ignore -->
+            <blockquote *ngIf="p.textoRespuesta !== null; else abiertaSinResponder" class="cr-respuesta-texto">{{ p.textoRespuesta }}</blockquote>
+            <ng-template #abiertaSinResponder><p class="cr-tag-linea">No respondiste esta pregunta.</p></ng-template>
+            <p class="cr-tag-linea" *ngIf="p.textoRespuesta !== null">
+              <ng-container *ngIf="p.puntajeObtenido !== null; else enRevision">
+                Puntaje: <strong>{{ formatearPuntaje(p.puntajeObtenido) }} / {{ p.puntaje }}</strong>
+              </ng-container>
+              <ng-template #enRevision>En revisión por el profesor.</ng-template>
+            </p>
+          </ng-container>
+          <ul class="cr-opciones-list" *ngIf="p.tipo !== 'ABIERTA'">
             <li
               *ngFor="let o of p.opciones"
               [class.correcta]="o.esCorrecta"
@@ -56,7 +73,8 @@
       <ul class="cr-preguntas-list">
         <li *ngFor="let p of c.preguntas">
           <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
-          <ul class="cr-opciones-list">
+          <p *ngIf="p.tipo === 'ABIERTA'" class="cr-tag-linea">Pregunta de respuesta abierta.</p>
+          <ul class="cr-opciones-list" *ngIf="p.tipo !== 'ABIERTA'">
             <li *ngFor="let o of p.opciones">{{ o.texto }}</li>
           </ul>
         </li>
@@ -72,12 +90,29 @@
       <ng-container *ngIf="c.preguntas.length > 0">
         <p class="cr-ayuda">
           Respondé todas las preguntas y tocá "Enviar" al final. No vas a poder cambiar tus respuestas después.
+          <ng-container *ngIf="tieneAbiertas()">
+            Las preguntas abiertas las califica el profesor, así que tu nota aparecerá cuando las revise.
+          </ng-container>
         </p>
 
         <ul class="cr-preguntas-list">
           <li *ngFor="let p of c.preguntas">
-            <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
-            <ul class="cr-opciones-list cr-opciones-form">
+            <p class="cr-enunciado" [id]="'cr-enunciado-' + p.id">
+              {{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span>
+            </p>
+            <div class="cr-abierta" *ngIf="p.tipo === 'ABIERTA'">
+              <label class="sr-only" [for]="'cr-texto-' + p.id">Tu respuesta</label>
+              <textarea
+                [id]="'cr-texto-' + p.id"
+                rows="4"
+                [maxLength]="maxCaracteresAbierta"
+                [attr.aria-describedby]="'cr-enunciado-' + p.id"
+                placeholder="Escribe tu respuesta…"
+                [value]="textos()[p.id] ?? ''"
+                (input)="escribirRespuesta(p.id, $any($event.target).value)"
+              ></textarea>
+            </div>
+            <ul class="cr-opciones-list cr-opciones-form" *ngIf="p.tipo !== 'ABIERTA'">
               <li *ngFor="let o of p.opciones">
                 <label>
                   <input

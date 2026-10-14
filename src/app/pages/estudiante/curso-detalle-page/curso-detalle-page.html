@@ -216,13 +216,14 @@
                       <span *ngSwitchCase="'respondido'" class="badge badge-on">
                         Respondido<ng-container *ngIf="estado.tipo === 'respondido'">: {{ estado.nota }} / {{ estado.puntajeMaximo }}</ng-container>
                       </span>
+                      <span *ngSwitchCase="'en-revision'" class="badge">Enviado · nota en revisión</span>
                       <span *ngSwitchCase="'pendiente'" class="badge">Sin responder</span>
                       <span *ngSwitchCase="'no-disponible'" class="badge">No disponible</span>
                     </ng-container>
                   </span>
                 </div>
                 <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">
-                  {{ estado.tipo === 'respondido' ? 'Ver revisión' : 'Abrir' }}
+                  {{ estado.tipo === 'respondido' || estado.tipo === 'en-revision' ? 'Ver revisión' : 'Abrir' }}
                 </ui-button>
               </ng-container>
             </li>

@@ -4,6 +4,7 @@ import {
   construirPreguntaRequest,
   correctaValidator,
   estadoCuestionarioEstudiante,
+  leerPuntaje,
   reindexarCorrecta,
 } from './cuestionario.util';
 
@@ -28,6 +29,7 @@ const intento: IntentoDetalle = {
   estudianteEmail: null,
   nota: 8,
   puntajeMaximo: 10,
+  estado: 'CALIFICADO',
   fechaEntrega: '2026-09-02T10:00:00',
   preguntas: [],
 };
@@ -53,11 +55,24 @@ describe('correctaValidator', () => {
   it('marca error si el índice quedó fuera de rango', () => {
     expect(grupo(2, 2).errors).toEqual({ sinCorrecta: true });
   });
+
+  it('no exige correcta en una pregunta abierta', () => {
+    const abierta = new FormGroup(
+      {
+        tipo: new FormControl('ABIERTA'),
+        opciones: new FormArray<FormControl<string | null>>([]),
+        correcta: new FormControl<number | null>(null),
+      },
+      { validators: correctaValidator() },
+    );
+    expect(abierta.errors).toBeNull();
+  });
 });
 
 describe('construirPreguntaRequest', () => {
   it('recorta textos, convierte el puntaje y marca solo la correcta', () => {
     const req = construirPreguntaRequest({
+      tipo: 'OPCION_MULTIPLE',
       enunciado: '  ¿2+2?  ',
       puntaje: 3,
       opciones: [
@@ -67,6 +82,7 @@ describe('construirPreguntaRequest', () => {
       correcta: 1,
     });
     expect(req).toEqual({
+      tipo: 'OPCION_MULTIPLE',
       enunciado: '¿2+2?',
       puntaje: 3,
       opciones: [
@@ -78,12 +94,55 @@ describe('construirPreguntaRequest', () => {
 
   it('no manda "id" en opciones nuevas', () => {
     const req = construirPreguntaRequest({
+      tipo: 'OPCION_MULTIPLE',
       enunciado: 'x',
       puntaje: 1,
       opciones: [{ id: null, texto: 'a' }],
       correcta: 0,
     });
     expect('id' in req.opciones[0]).toBe(false);
+  });
+
+  it('verdadero/falso manda sus dos opciones con la correcta marcada', () => {
+    const req = construirPreguntaRequest({
+      tipo: 'VERDADERO_FALSO',
+      enunciado: 'Java es compilado',
+      puntaje: 1,
+      opciones: [
+        { id: null, texto: 'Verdadero' },
+        { id: null, texto: 'Falso' },
+      ],
+      correcta: 1,
+    });
+    expect(req.opciones).toEqual([
+      { texto: 'Verdadero', esCorrecta: false },
+      { texto: 'Falso', esCorrecta: true },
+    ]);
+  });
+
+  it('una abierta va sin opciones aunque el formulario haya quedado con alguna', () => {
+    const req = construirPreguntaRequest({
+      tipo: 'ABIERTA',
+      enunciado: 'Explica qué es una API',
+      puntaje: 2,
+      opciones: [{ id: null, texto: 'resto de otro tipo' }],
+      correcta: 0,
+    });
+    expect(req).toEqual({ tipo: 'ABIERTA', enunciado: 'Explica qué es una API', puntaje: 2, opciones: [] });
+  });
+});
+
+describe('leerPuntaje', () => {
+  it('acepta punto o coma decimal', () => {
+    expect(leerPuntaje('0.5')).toBe(0.5);
+    expect(leerPuntaje(' 0,75 ')).toBe(0.75);
+    expect(leerPuntaje('2')).toBe(2);
+  });
+
+  it('null si está vacío o no es un número', () => {
+    expect(leerPuntaje('')).toBeNull();
+    expect(leerPuntaje('   ')).toBeNull();
+    expect(leerPuntaje('abc')).toBeNull();
   });
 });
 
@@ -111,6 +170,12 @@ describe('estadoCuestionarioEstudiante', () => {
       tipo: 'respondido',
       nota: 8,
       puntajeMaximo: 10,
+    });
+  });
+
+  it('en revisión si el intento llegó sin nota (abiertas sin calificar)', () => {
+    expect(estadoCuestionarioEstudiante(cuestionario(true), { ...intento, nota: null, estado: 'PENDIENTE_REVISION' })).toEqual({
+      tipo: 'en-revision',
     });
   });
 

@@ -40,12 +40,18 @@
               <span class="cq-pregunta-enunciado">{{ p.enunciado }}</span>
               <span class="cq-pregunta-puntaje">{{ p.puntaje }} pts</span>
             </div>
-            <ul class="cq-opciones-list">
-              <li *ngFor="let o of p.opciones" [class.correcta]="o.esCorrecta">
-                {{ o.texto }}
-                <span *ngIf="o.esCorrecta" class="cq-check">✓ correcta</span>
-              </li>
-            </ul>
+            <span class="cq-tipo">{{ tipoLabels[p.tipo] }}</span>
+            <p *ngIf="p.tipo === 'ABIERTA'; else opcionesPregunta" class="cq-abierta-nota">
+              El estudiante escribe su respuesta y tú la calificas desde "Resultados".
+            </p>
+            <ng-template #opcionesPregunta>
+              <ul class="cq-opciones-list">
+                <li *ngFor="let o of p.opciones" [class.correcta]="o.esCorrecta">
+                  {{ o.texto }}
+                  <span *ngIf="o.esCorrecta" class="cq-check">✓ correcta</span>
+                </li>
+              </ul>
+            </ng-template>
             <div class="cq-pregunta-actions">
               <button type="button" (click)="abrirEditarPregunta(p)">Editar</button>
               <button type="button" class="cq-link-eliminar" (click)="pedirEliminarPregunta(p)">Eliminar</button>
@@ -66,6 +72,20 @@
         <h3>{{ preguntaEditandoId() ? 'Editar pregunta' : 'Nueva pregunta' }}</h3>
 
         <p *ngIf="errorFormulario()" class="cq-error cq-error-form" role="alert">{{ errorFormulario() }}</p>
+
+        <fieldset class="cq-tipos" *ngIf="!preguntaEditandoId(); else tipoFijo">
+          <legend class="cq-label">Tipo de pregunta</legend>
+          <label *ngFor="let t of tipos" class="cq-tipo-opcion" [class.activa]="tipoActual === t">
+            <input type="radio" name="cq-tipo" [value]="t" [checked]="tipoActual === t" (change)="cambiarTipo(t)" />
+            {{ tipoLabels[t] }}
+          </label>
+        </fieldset>
+        <ng-template #tipoFijo>
+          <p class="cq-tipo-fijo">
+            Tipo: <strong>{{ tipoLabels[tipoActual] }}</strong>
+            <span>(no se puede cambiar; para otro tipo, crea una pregunta nueva)</span>
+          </p>
+        </ng-template>
 
         <textarea-field
           label="Enunciado"
@@ -88,7 +108,21 @@
           ></form-field>
         </div>
 
-        <fieldset class="cq-opciones" formArrayName="opciones">
+        <p *ngIf="tipoActual === 'ABIERTA'" class="cq-abierta-nota">
+          El estudiante responde con un texto. Cuando lo envíe, el cuestionario queda "en revisión" hasta que le
+          asignes un puntaje desde la pestaña "Resultados".
+        </p>
+
+        <fieldset class="cq-opciones" *ngIf="tipoActual === 'VERDADERO_FALSO'">
+          <legend class="cq-label">Marca la respuesta correcta</legend>
+          <label class="cq-opcion-vf" *ngFor="let o of opciones.controls; let i = index">
+            <input type="radio" name="cq-correcta-vf" [formControl]="preguntaForm.controls.correcta" [value]="i" />
+            {{ o.controls.texto.value }}
+          </label>
+          <p class="cq-error-campo" *ngIf="faltaCorrecta">Marca si la afirmación es verdadera o falsa.</p>
+        </fieldset>
+
+        <fieldset class="cq-opciones" formArrayName="opciones" *ngIf="tipoActual === 'OPCION_MULTIPLE'">
           <legend class="cq-label">Opciones — marca cuál es la correcta</legend>
           <div class="cq-opcion" *ngFor="let o of opciones.controls; let i = index" [formGroupName]="i">
             <div class="cq-opcion-fila">
@@ -122,7 +156,14 @@
           </div>
           <p class="cq-error-campo" *ngIf="faltaCorrecta">Marca cuál opción es la correcta.</p>
         </fieldset>
-        <button type="button" class="cq-agregar-opcion" (click)="agregarOpcion()">+ Agregar opción</button>
+        <button
+          type="button"
+          class="cq-agregar-opcion"
+          *ngIf="tipoActual === 'OPCION_MULTIPLE'"
+          (click)="agregarOpcion()"
+        >
+          + Agregar opción
+        </button>
 
         <div class="cq-form-actions">
           <button type="button" class="cq-cancelar" (click)="cancelarFormulario()">Cancelar</button>
@@ -133,13 +174,101 @@
       </form>
     </div>
 
-    <div class="cq-body" *ngIf="tabActiva() === 'resultados'">
+    <div class="cq-body" *ngIf="tabActiva() === 'resultados' && !intentoRevision()">
+      <p *ngIf="cargandoRevision()" class="cq-estado">Abriendo intento…</p>
       <data-table
         [columns]="intentoColumnas"
         [rows]="intentos()"
         [loading]="cargandoResultados()"
         emptyMessage="Todavía nadie respondió este cuestionario."
-      ></data-table>
+      >
+        <ng-template dataTableCell="estado" let-intento>
+          <span class="cq-estado-intento" [class.pendiente]="intento.estado === 'PENDIENTE_REVISION'">
+            {{ intento.estado === 'PENDIENTE_REVISION' ? 'Por revisar' : 'Calificado' }}
+          </span>
+        </ng-template>
+        <ng-template dataTableCell="acciones" let-intento>
+          <button type="button" class="cq-btn-revisar" (click)="abrirRevision(intento)">
+            {{ intento.estado === 'PENDIENTE_REVISION' ? 'Calificar' : 'Ver respuestas' }}
+          </button>
+        </ng-template>
+      </data-table>
+    </div>
+
+    <!-- Revisión de un intento: respuestas del estudiante y calificación de las abiertas -->
+    <div class="cq-body" *ngIf="tabActiva() === 'resultados' && intentoRevision() as intento">
+      <button type="button" class="cq-volver" (click)="cerrarRevision()">← Volver a resultados</button>
+
+      <div class="cq-revision-header">
+        <h3>{{ intento.estudianteNombre || 'Estudiante #' + intento.estudianteId }}</h3>
+        <span>
+          Nota: <strong>{{ formatearPuntaje(intento.nota ?? 0) }} / {{ formatearPuntaje(intento.puntajeMaximo) }}</strong>
+          <span class="cq-estado-intento" [class.pendiente]="intento.estado === 'PENDIENTE_REVISION'">
+            {{ intento.estado === 'PENDIENTE_REVISION' ? 'Faltan respuestas por calificar' : 'Calificado' }}
+          </span>
+        </span>
+      </div>
+
+      <p *ngIf="errorRevision()" class="cq-error" role="alert">{{ errorRevision() }}</p>
+
+      <ul class="cq-preguntas-list">
+        <li *ngFor="let p of intento.preguntas">
+          <div class="cq-pregunta-header">
+            <span class="cq-pregunta-enunciado">{{ p.enunciado }}</span>
+            <span class="cq-pregunta-puntaje">{{ p.puntaje }} pts</span>
+          </div>
+          <span class="cq-tipo">{{ tipoLabels[p.tipo] }}</span>
+
+          <ng-container *ngIf="p.tipo === 'ABIERTA'; else revisionCerrada">
+            <p *ngIf="p.textoRespuesta === null" class="cq-abierta-nota">Sin responder: cuenta 0 puntos.</p>
+            <ng-container *ngIf="p.textoRespuesta !== null">
+              <blockquote class="cq-respuesta-texto">{{ p.textoRespuesta }}</blockquote>
+              <div class="cq-calificar">
+                <label [for]="'cq-puntaje-' + p.id">Puntaje (0 a {{ p.puntaje }})</label>
+                <input
+                  [id]="'cq-puntaje-' + p.id"
+                  type="text"
+                  inputmode="decimal"
+                  [value]="puntajesEditados()[p.id] ?? ''"
+                  [attr.aria-invalid]="!!errorPuntaje(p)"
+                  [attr.aria-describedby]="'cq-puntaje-ayuda-' + p.id"
+                  (input)="editarPuntaje(p.id, $any($event.target).value)"
+                  (keydown.enter)="guardarPuntaje(p)"
+                />
+                <button
+                  type="button"
+                  class="cq-guardar"
+                  [disabled]="!!errorPuntaje(p) || guardandoPuntajeDe() === p.id"
+                  (click)="guardarPuntaje(p)"
+                >
+                  {{ guardandoPuntajeDe() === p.id ? 'Guardando…' : p.puntajeObtenido === null ? 'Calificar' : 'Actualizar' }}
+                </button>
+              </div>
+              <p [id]="'cq-puntaje-ayuda-' + p.id" class="cq-calificar-ayuda">
+                <ng-container *ngIf="p.puntajeObtenido !== null; else sinCalificar">
+                  Calificada con {{ formatearPuntaje(p.puntajeObtenido) }} de {{ p.puntaje }}.
+                </ng-container>
+                <ng-template #sinCalificar>Todavía sin calificar.</ng-template>
+              </p>
+            </ng-container>
+          </ng-container>
+
+          <ng-template #revisionCerrada>
+            <ul class="cq-opciones-list">
+              <li
+                *ngFor="let o of p.opciones"
+                [class.correcta]="o.esCorrecta"
+                [class.elegida-incorrecta]="o.id === p.opcionElegidaId && !o.esCorrecta"
+              >
+                {{ o.texto }}
+                <span *ngIf="o.id === p.opcionElegidaId" class="cq-check">eligió esta</span>
+                <span *ngIf="o.esCorrecta" class="cq-check">✓ correcta</span>
+              </li>
+            </ul>
+            <p *ngIf="p.opcionElegidaId === null" class="cq-abierta-nota">Sin responder.</p>
+          </ng-template>
+        </li>
+      </ul>
     </div>
   </div>
 </div>

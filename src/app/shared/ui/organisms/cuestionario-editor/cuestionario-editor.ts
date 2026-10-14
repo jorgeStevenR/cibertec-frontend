@@ -20,12 +20,22 @@ import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { FormField } from '../../molecules/form-field/form-field';
 import { TextareaField } from '../../molecules/textarea-field/textarea-field';
 import { CuestionarioService } from '../../../../core/services/cuestionario.service';
-import { CuestionarioDetalle, IntentoResumen, Pregunta } from '../../../../core/models/cuestionario.model';
-import { extraerMensajeError } from '../../../../core/utils/http-error.util';
-import { formatearFecha } from '../../../../core/utils/labels.util';
 import {
+  CuestionarioDetalle,
+  IntentoDetalle,
+  IntentoResumen,
+  Pregunta,
+  PreguntaConRespuesta,
+  TipoPregunta,
+} from '../../../../core/models/cuestionario.model';
+import { extraerMensajeError } from '../../../../core/utils/http-error.util';
+import { formatearFecha, formatearPuntaje } from '../../../../core/utils/labels.util';
+import {
+  OPCIONES_VERDADERO_FALSO,
+  TIPO_PREGUNTA_LABELS,
   construirPreguntaRequest,
   correctaValidator,
+  leerPuntaje,
   reindexarCorrecta,
 } from '../../../../core/utils/cuestionario.util';
 
@@ -57,6 +67,9 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   private readonly focoPrevio = this.documento.activeElement as HTMLElement | null;
 
   readonly formatearFecha = formatearFecha;
+  readonly formatearPuntaje = formatearPuntaje;
+  readonly tipoLabels = TIPO_PREGUNTA_LABELS;
+  readonly tipos: TipoPregunta[] = ['OPCION_MULTIPLE', 'VERDADERO_FALSO', 'ABIERTA'];
 
   readonly detalle = signal<CuestionarioDetalle | null>(null);
   readonly cargando = signal(false);
@@ -68,9 +81,19 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   readonly intentoColumnas: DataTableColumn<IntentoResumen>[] = [
     { key: 'estudiante', label: 'Estudiante', format: (i) => i.estudianteNombre || `Estudiante #${i.estudianteId}` },
-    { key: 'nota', label: 'Nota', format: (i) => `${i.nota} / ${i.puntajeMaximo}` },
+    { key: 'nota', label: 'Nota', format: (i) => `${formatearPuntaje(i.nota)} / ${formatearPuntaje(i.puntajeMaximo)}` },
+    { key: 'estado', label: 'Estado' },
     { key: 'fecha', label: 'Respondido', format: (i) => this.formatearFecha(i.fechaEntrega) },
+    { key: 'acciones', label: '' },
   ];
+
+  // --- Revisión de un intento (calificar respuestas abiertas) ---
+  readonly intentoRevision = signal<IntentoDetalle | null>(null);
+  readonly cargandoRevision = signal(false);
+  readonly errorRevision = signal('');
+  // Puntaje escrito por el profesor en cada abierta, por id de pregunta (texto crudo del input).
+  readonly puntajesEditados = signal<Record<number, string>>({});
+  readonly guardandoPuntajeDe = signal<number | null>(null);
 
   // --- Formulario de pregunta (nueva o edición) ---
   readonly formularioAbierto = signal(false);
@@ -80,6 +103,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   readonly preguntaForm = this.fb.group(
     {
+      tipo: this.fb.nonNullable.control<TipoPregunta>('OPCION_MULTIPLE'),
       enunciado: this.fb.nonNullable.control('', [Validators.required, NO_VACIO]),
       puntaje: this.fb.control<number | null>(1, [Validators.required, Validators.min(1)]),
       opciones: this.fb.array<OpcionFormGroup>([this.crearOpcion(), this.crearOpcion()]),
@@ -112,9 +136,14 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   }
 
   // Escape cierra el overlay, salvo que haya un diálogo de confirmación encima.
+  // Si se está revisando un intento, primero vuelve a la lista de resultados.
   @HostListener('document:keydown.escape')
   cerrarConEscape(): void {
     if (this.confirmEliminarPreguntaAbierto() || this.confirmEliminarCuestionarioAbierto()) {
+      return;
+    }
+    if (this.intentoRevision()) {
+      this.cerrarRevision();
       return;
     }
     this.cerrar();
@@ -143,6 +172,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   // editor está abierto pueden llegar intentos nuevos de los estudiantes.
   seleccionarTab(tab: 'preguntas' | 'resultados'): void {
     this.tabActiva.set(tab);
+    this.cerrarRevision();
     if (tab === 'resultados') {
       this.cargarResultados();
     }
@@ -174,7 +204,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   private abrirFormulario(
     opciones: OpcionFormGroup[],
-    valores: { enunciado: string; puntaje: number; correcta: number | null },
+    valores: { tipo: TipoPregunta; enunciado: string; puntaje: number; correcta: number | null },
   ): void {
     this.opciones.clear();
     opciones.forEach((o) => this.opciones.push(o));
@@ -185,7 +215,35 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   abrirNuevaPregunta(): void {
     this.preguntaEditandoId.set(null);
-    this.abrirFormulario([this.crearOpcion(), this.crearOpcion()], { enunciado: '', puntaje: 1, correcta: null });
+    this.abrirFormulario(this.opcionesIniciales('OPCION_MULTIPLE'), {
+      tipo: 'OPCION_MULTIPLE',
+      enunciado: '',
+      puntaje: 1,
+      correcta: null,
+    });
+  }
+
+  // Solo al crear: el backend no deja cambiar el tipo de una pregunta existente.
+  // Conserva el enunciado y el puntaje que ya se hubieran escrito.
+  cambiarTipo(tipo: TipoPregunta): void {
+    const { enunciado, puntaje } = this.preguntaForm.getRawValue();
+    this.abrirFormulario(this.opcionesIniciales(tipo), { tipo, enunciado, puntaje: puntaje ?? 1, correcta: null });
+  }
+
+  // Verdadero/falso usa el mismo arreglo de opciones con dos textos fijos; la
+  // abierta no lleva opciones (así sus validadores de texto no la bloquean).
+  private opcionesIniciales(tipo: TipoPregunta): OpcionFormGroup[] {
+    if (tipo === 'ABIERTA') {
+      return [];
+    }
+    if (tipo === 'VERDADERO_FALSO') {
+      return OPCIONES_VERDADERO_FALSO.map((texto) => this.crearOpcion(null, texto));
+    }
+    return [this.crearOpcion(), this.crearOpcion()];
+  }
+
+  get tipoActual(): TipoPregunta {
+    return this.preguntaForm.controls.tipo.value;
   }
 
   abrirEditarPregunta(pregunta: Pregunta): void {
@@ -193,7 +251,12 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
     const idxCorrecta = pregunta.opciones.findIndex((o) => o.esCorrecta);
     this.abrirFormulario(
       pregunta.opciones.map((o) => this.crearOpcion(o.id, o.texto)),
-      { enunciado: pregunta.enunciado, puntaje: pregunta.puntaje, correcta: idxCorrecta >= 0 ? idxCorrecta : null },
+      {
+        tipo: pregunta.tipo,
+        enunciado: pregunta.enunciado,
+        puntaje: pregunta.puntaje,
+        correcta: idxCorrecta >= 0 ? idxCorrecta : null,
+      },
     );
   }
 
@@ -206,7 +269,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   }
 
   quitarOpcion(indice: number): void {
-    if (this.opciones.length <= 2) {
+    if (this.tipoActual !== 'OPCION_MULTIPLE' || this.opciones.length <= 2) {
       return;
     }
     this.opciones.removeAt(indice);
@@ -249,6 +312,78 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
       error: (err: HttpErrorResponse) => {
         this.guardandoPregunta.set(false);
         this.errorFormulario.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  // --- Revisión de intentos ---
+
+  abrirRevision(intento: IntentoResumen): void {
+    this.cargandoRevision.set(true);
+    this.error.set('');
+    this.cuestionarioService.obtenerIntento(intento.id).subscribe({
+      next: (detalle) => {
+        this.cargandoRevision.set(false);
+        this.mostrarRevision(detalle);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cargandoRevision.set(false);
+        this.error.set(extraerMensajeError(err));
+      },
+    });
+  }
+
+  cerrarRevision(): void {
+    this.intentoRevision.set(null);
+    this.errorRevision.set('');
+  }
+
+  private mostrarRevision(detalle: IntentoDetalle): void {
+    this.intentoRevision.set(detalle);
+    const puntajes: Record<number, string> = {};
+    for (const p of detalle.preguntas) {
+      if (p.tipo === 'ABIERTA' && p.textoRespuesta !== null) {
+        puntajes[p.id] = p.puntajeObtenido === null ? '' : String(p.puntajeObtenido);
+      }
+    }
+    this.puntajesEditados.set(puntajes);
+  }
+
+  editarPuntaje(preguntaId: number, valor: string): void {
+    this.puntajesEditados.set({ ...this.puntajesEditados(), [preguntaId]: valor });
+  }
+
+  // null = válido.
+  errorPuntaje(pregunta: PreguntaConRespuesta): string | null {
+    const valor = leerPuntaje(this.puntajesEditados()[pregunta.id] ?? '');
+    if (valor === null || valor < 0 || valor > pregunta.puntaje) {
+      return `Escribe un número entre 0 y ${pregunta.puntaje}.`;
+    }
+    return null;
+  }
+
+  guardarPuntaje(pregunta: PreguntaConRespuesta): void {
+    const intento = this.intentoRevision();
+    const valor = leerPuntaje(this.puntajesEditados()[pregunta.id] ?? '');
+    if (!intento || valor === null || this.errorPuntaje(pregunta)) {
+      return;
+    }
+    this.guardandoPuntajeDe.set(pregunta.id);
+    this.errorRevision.set('');
+    this.cuestionarioService.calificarRespuesta(intento.id, pregunta.id, valor).subscribe({
+      next: (actualizado) => {
+        this.guardandoPuntajeDe.set(null);
+        this.mostrarRevision(actualizado);
+        // La lista de resultados refleja la nota y el estado nuevos sin pedirla de nuevo.
+        this.intentos.set(
+          this.intentos().map((i) =>
+            i.id === actualizado.id ? { ...i, nota: actualizado.nota ?? i.nota, estado: actualizado.estado } : i,
+          ),
+        );
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoPuntajeDe.set(null);
+        this.errorRevision.set(extraerMensajeError(err));
       },
     });
   }

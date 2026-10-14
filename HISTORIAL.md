@@ -139,11 +139,15 @@ este repo).
   pestañas con nombre; el estudiante ve una paginación numérica (1, 2, 3…) abajo.
 - **Actividades** (talleres con archivo): entrega de archivo por el estudiante y
   calificación manual por el profesor — funcionalidad preexistente, sin cambios.
-- **Cuestionarios** (quiz de opción múltiple autocalificado): el profesor arma
-  preguntas con opciones marcando la correcta; el estudiante responde una sola
-  vez y ve su nota y revisión al instante; el profesor ve una tabla de
-  resultados. Soporta ventana de disponibilidad (`fechaApertura`/`fechaEntrega`)
-  — ver "Pendiente", el backend todavía no persiste esos 2 campos.
+- **Cuestionarios** con preguntas de **opción múltiple, verdadero/falso y
+  respuesta abierta** (2026-10-14): el profesor elige el tipo al crear la
+  pregunta (no se puede cambiar después); el estudiante responde una sola vez.
+  Si solo hay cerradas ve su nota y revisión al instante; si hay abiertas, el
+  intento queda "en revisión" y no ve nota hasta que el profesor las califique.
+  En "Resultados" el profesor ve el estado de cada intento y entra a
+  "Calificar" para poner un puntaje entre 0 y el de la pregunta (acepta
+  decimales con coma o punto). Soporta ventana de disponibilidad
+  (`fechaApertura`/`fechaEntrega`).
 - **Programas académicos**: un programa agrupa cursos y tiene su propia
   matrícula de estudiantes (separada de la matrícula a curso individual).
 - Panel de profesor: se quitó el botón Publicar/Despublicar del curso, y la
@@ -161,6 +165,15 @@ este repo).
   todos los hallazgos críticos/importantes — ver "Decisiones importantes".
 
 ## En progreso
+
+**Probar en el navegador los tipos de pregunta (2026-10-14).** La API se probó
+de punta a punta con llamadas directas (profesor `marco.aguilar`, estudiante
+`camila.torres`, curso 31, contraseña `Sim12345!`) y el frontend compila y
+pasa los tests, pero la UI no se recorrió todavía: crear una pregunta de cada
+tipo, responder como estudiante (chip "Enviado · nota en revisión"),
+calificar la abierta desde Resultados y ver que la nota aparezca en la
+revisión del estudiante y en Calificaciones ("En revisión" → "Rendido").
+Revisar también en un viewport angosto (mobile).
 
 **Verificar los 3 endpoints del estudiante contra el backend reiniciado.** El
 2026-09-18 el proceso del puerto 8080 arrancó antes de compilar el controlador
@@ -310,6 +323,25 @@ próxima sesión antes de dar por cerrado.
   intencional contra escalamiento de privilegios.
 
 ## Log de sesiones
+
+### 2026-10-14
+- Revisión del alcance contra el plan de práctica (UNIMINUTO): el proyecto es un
+  MVP, no una réplica de Moodle. Decisión del usuario: cerrar primero lo que
+  falta del plan (tipos de pregunta, bugs conocidos, despliegue, pruebas con
+  usuarios, manuales) y pulir después.
+- Cuestionarios: soporte de verdadero/falso y respuesta abierta (backend en el
+  commit hermano del repo backend). `cuestionario-editor` suma selector de
+  tipo, vista de V/F con dos opciones fijas, y una vista de revisión de
+  intentos dentro de "Resultados" para calificar abiertas.
+  `cuestionario-responder` suma el cuadro de texto, la nota "pendiente" y el
+  puntaje por abierta. Funciones puras nuevas en `cuestionario.util.ts`
+  (`leerPuntaje`, estado `en-revision`) con tests.
+- Bugs detectados en el recorrido del gestor (sin corregir todavía):
+  `usuario-detalle-page` pide matrículas de un estudiante con `forkJoin` y el
+  backend responde 403 al GESTOR_USUARIOS, lo que tumba toda la sección de
+  pertenencia; para un PROFESOR nunca se llena `programasPertenece`, por eso
+  dice "no pertenece a ningún programa" (se puede derivar de `programaNombre`
+  de sus cursos).
 
 ### 2026-09-30
 - Backend apagado: no se pudieron verificar los endpoints del estudiante (sigue
