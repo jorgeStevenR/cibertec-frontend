@@ -170,20 +170,9 @@ este repo).
 
 ## En progreso
 
-**Re-verificar en el navegador los arreglos del 2026-10-21** (el recorrido de
-Claude en Chrome de ese día dio 9 ✅ / 4 ❌; los ❌ se corrigieron pero no se
-volvieron a mirar): decimales con coma ("3,5 de 4 pts", "Calificada con 0,5
-de 1"); foco al abrir/cerrar la revisión del intento, después de "Calificar",
-al cerrar el editor (vuelve a "Preguntas y resultados") y al finalizar el
-estudiante (va al mensaje del resultado); el diálogo "¿Seguro que quieres
-finalizar?" recibe el foco; Escape durante "Abriendo intento…" se queda en
-Resultados; cabecera del editor a 375 px; editar una pregunta lleva la vista
-al formulario. Cuentas: `marco.aguilar`/`camila.torres` (`Sim12345!`), curso
-31, módulo 37; nombrar "PRUEBA …" lo que se cree y borrarlo.
-
-Lo demás de los tipos de pregunta, la nota sobre 5 / `mostrarNota`, responder
-de a una pregunta y la ficha del gestor quedó **verificado en el navegador**
-el 2026-10-21 (ver log). Sigue sin probarse el CRUD completo del rol
+Los tipos de pregunta, la nota sobre 5 / `mostrarNota`, responder de a una
+pregunta, la ficha del gestor y los arreglos de foco/Escape/decimales/375 px
+quedaron **verificados en el navegador** el 2026-10-21 (ver log). Sigue sin probarse el CRUD completo del rol
 GESTOR_USUARIOS (crear/editar/eliminar un profesor o estudiante e intentar
 tocar una cuenta admin para confirmar el bloqueo).
 
@@ -374,6 +363,12 @@ tocar una cuenta admin para confirmar el bloqueo).
   respuestas a medio contestar no se guardan si el estudiante recarga
   (sería una feature nueva). `.course-main` desborda 8 px a 375 px (ya
   estaba en la lista de pendientes de responsive).
+- **Re-verificación en el navegador de los arreglos: 6/6 ✅** (coma en todos
+  los puntajes, foco en cada paso del profesor y del estudiante, Escape durante
+  "Abriendo intento…", cabecera a 375 px, scroll al editar y "Te falta 1
+  pregunta"). Cerrar el editor ya no muestra "Cargando…". Se borró "PRUEBA
+  reverif". Los 375 px se probaron en un iframe de ese ancho, no con
+  emulación de dispositivo.
 - Para avisar al backend (sin tocarlo): CORS solo acepta
   `http://localhost:4200`; al publicar hay que sumar el dominio del front, y
   el backend tiene que estar en HTTPS.
