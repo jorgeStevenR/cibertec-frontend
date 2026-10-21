@@ -328,9 +328,7 @@ tocar una cuenta admin para confirmar el bloqueo).
   la URL, y el build de desarrollo lleva localhost.
 - README de Angular reemplazado por uno real (qué es, roles, requisitos, correr
   en local, otro backend, publicar, tests).
-- El recorrido en el navegador lo hizo Claude en Chrome (esta sesión no tenía
-  herramientas de navegador).
-- **Recorrido en el navegador (Claude en Chrome)**: A–H del prompt de prueba
+- **Recorrido en el navegador**: A–H del prompt de prueba
   (gestor, crear cuestionario de 3 tipos con la casilla apagada, responder de
   a una pregunta, calificar con validación, "Nota no publicada", activar la
   casilla, teclado, 375 px y borrado). 9 ✅ / 4 ❌. Corregido:
@@ -455,7 +453,7 @@ tocar una cuenta admin para confirmar el bloqueo).
   respuesta del cuestionario cuando son null: **no es un bug**,
   `CuestionarioResponseDTO` tiene `@JsonInclude(NON_NULL)`. El front los tipa
   `| null` y lo tolera.
-- **Bug encontrado en el navegador (Claude en Chrome)**: en Resultados la
+- **Bug encontrado en el navegador**: en Resultados la
   columna Estado mostraba `PENDIENTE_REVISION` crudo y no aparecía el botón
   "Calificar" → el profesor no podía calificar abiertas desde la UI.
   Causa: `cuestionario-editor` usaba `<ng-template dataTableCell>` sin

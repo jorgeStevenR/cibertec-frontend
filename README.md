@@ -71,5 +71,4 @@ npx ng test --watch=false  # una sola corrida (CI)
 
 ## Más contexto
 
-- `CLAUDE.md`: convenciones del proyecto (standalone components, signals, español en el dominio, accesibilidad).
 - `HISTORIAL.md`: estado actual, decisiones y log de cada sesión de trabajo.
