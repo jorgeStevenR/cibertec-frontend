@@ -2,7 +2,7 @@
 
 Frontend Angular (standalone components + signals) de una plataforma tipo Moodle:
 paneles de Administrador, Profesor y Estudiante consumiendo un backend REST en
-`http://localhost:8080/api` (ver `src/app/core/config/api.config.ts`).
+`http://localhost:8080/api` en desarrollo (la URL sale de `src/environments/`; ver README.md).
 
 **Antes de empezar a trabajar, leé `HISTORIAL.md`** (raíz del proyecto) para saber
 en qué estado quedó el proyecto, qué se hizo en la última sesión y qué falta.

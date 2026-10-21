@@ -1,59 +1,75 @@
-# Frontend
+# LMS CIBERCTEC — Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.7.
+Plataforma educativa tipo aula virtual (MVP de práctica profesional UNIMINUTO –
+CIBERCTEC). Este repositorio es el **frontend** en Angular; consume la API REST del
+backend Spring Boot (repositorio aparte, `../backend`).
 
-## Development server
+Permite gestionar programas, cursos, matrículas y usuarios, y dentro de cada curso
+módulos con páginas, recursos, actividades con entrega de archivo y cuestionarios
+(opción múltiple, verdadero/falso y respuesta abierta) con notas en escala 0,0–5,0.
 
-To start a local development server, run:
+## Roles
 
-```bash
-ng serve
-```
+| Rol | Qué hace |
+|---|---|
+| **Administrador** | Programas, cursos (asigna profesor y programa) y matrículas. Ve usuarios y contenido en solo lectura. |
+| **Gestor de usuarios** | Crea, edita, desactiva y resetea la contraseña de profesores y estudiantes. |
+| **Profesor** | Arma el contenido de sus cursos (módulos, páginas, actividades, cuestionarios), califica y decide si el estudiante ve la nota de cada cuestionario. |
+| **Estudiante** | Ve sus cursos, entrega actividades, responde cuestionarios y consulta su avance, calendario y calificaciones. |
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Requisitos
 
-## Code scaffolding
+- Node.js LTS reciente (22 o superior; probado con 26.7) y npm.
+- El backend corriendo (por defecto en `http://localhost:8080`).
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+## Correr en local
 
 ```bash
-ng build
+npm install
+npm start
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Abre `http://localhost:4200`. En desarrollo la app llama a `http://localhost:8080/api`.
 
-## Running unit tests
+## Apuntar a otro backend
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+La URL sale de los environments de Angular (`src/environments/`):
+
+- **Desarrollo** (`npm start`): `environment.development.ts`. Para usar otro
+  backend local, cambiá `apiBaseUrl` en ese archivo.
+- **Producción**: `environment.ts` tiene el marcador `__API_BASE_URL__`, que se
+  reemplaza al compilar con la variable de entorno `API_BASE_URL`:
+
+  ```bash
+  API_BASE_URL=https://mi-backend.com/api npm run build:produccion
+  ```
+
+  El resultado queda en `dist/frontend/browser`. Sin la variable, el comando
+  falla a propósito para no publicar una app sin backend configurado.
+
+### Publicar (Vercel o Netlify)
+
+`vercel.json` y `netlify.toml` ya traen el comando de build, la carpeta de salida y
+la redirección de todas las rutas a `index.html` (sin eso, recargar una URL como
+`/estudiante/cursos/31` da 404). En el panel del hosting solo hay que:
+
+1. Conectar el repositorio.
+2. Definir la variable de entorno `API_BASE_URL` (ej. `https://mi-backend.com/api`).
+
+Además, del lado del backend:
+
+- Tiene que estar publicado con **HTTPS** (una página HTTPS no puede llamar a una API HTTP).
+- Su configuración de **CORS** tiene que permitir el dominio del frontend publicado
+  (hoy solo permite `http://localhost:4200`).
+
+## Tests
 
 ```bash
-ng test
+npm test                 # Vitest en modo watch
+npx ng test --watch=false  # una sola corrida (CI)
 ```
 
-## Running end-to-end tests
+## Más contexto
 
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- `CLAUDE.md`: convenciones del proyecto (standalone components, signals, español en el dominio, accesibilidad).
+- `HISTORIAL.md`: estado actual, decisiones y log de cada sesión de trabajo.

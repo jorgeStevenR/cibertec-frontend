@@ -14,6 +14,10 @@ este repo).
 
 ## Estado actual
 
+- **Listo para desplegar (2026-10-21)**: environments de Angular, script
+  `build:produccion` con `API_BASE_URL`, `vercel.json` y `netlify.toml` (build,
+  carpeta de salida y redirección de rutas a `index.html`), README real. No se
+  publicó nada; falta que el backend esté en HTTPS y acepte el dominio en CORS.
 - **Login** y guards por rol (admin/profesor/estudiante). Rediseño visual: panel
   izquierdo con carrusel de fotos (rota cada 6s, `photo-carousel` en
   `shared/ui/molecules`), logo real de Cibertec (`public/logo-ciberctec.png`)
@@ -232,7 +236,12 @@ próxima sesión antes de dar por cerrado.
 
 ## Integración con backend
 
-- **URL base**: `http://localhost:8080/api` (`src/app/core/config/api.config.ts`).
+- **URL base**: sale de `src/environments/` (desarrollo: `http://localhost:8080/api`;
+  producción: variable `API_BASE_URL` del hosting, que `npm run build:produccion`
+  escribe sobre el marcador `__API_BASE_URL__`). `core/config/api.config.ts` la
+  reexporta como `API_BASE_URL`. Detalle de cómo publicar en `README.md`.
+- **CORS del backend**: hoy solo permite `http://localhost:4200`
+  (`SecurityConfig.java`). Para publicar hay que sumar el dominio del front.
 - **Auth**: JWT guardado en `localStorage`, adjuntado por
   `core/interceptors/auth.interceptor.ts`.
 - La lista completa y actualizada de endpoints está en el código
@@ -323,6 +332,27 @@ próxima sesión antes de dar por cerrado.
   intencional contra escalamiento de privilegios.
 
 ## Log de sesiones
+
+### 2026-10-21
+- Revisión antes de entregar: lo de la nota sobre 5 / `mostrarNota` /
+  responder de a una pregunta estaba completo contra el contrato del backend
+  (nada a medias); se commiteó en `feature/cuestionarios-nota-visible`.
+- Preparación para desplegar: `ng generate environments`;
+  `environment.development.ts` = localhost, `environment.ts` (producción) =
+  marcador `__API_BASE_URL__` que reemplaza `scripts/configurar-api.mjs` con la
+  variable `API_BASE_URL` (falla si falta o no empieza con http(s), avisa si es
+  http no local). `npm run build:produccion` = script + `ng build`. Si alguien
+  compila sin el script, `api.config.ts` deja un error claro en consola.
+  `vercel.json`, `netlify.toml` y `public/_redirects` con la redirección SPA.
+  Probado: sin variable falla, URL inválida falla, con variable el bundle lleva
+  la URL, y el build de desarrollo lleva localhost.
+- README de Angular reemplazado por uno real (qué es, roles, requisitos, correr
+  en local, otro backend, publicar, tests).
+- **No se pudo recorrer nada en el navegador**: la sesión no tenía
+  herramientas de navegador. Sigue en "En progreso".
+- Para avisar al backend (sin tocarlo): CORS solo acepta
+  `http://localhost:4200`; al publicar hay que sumar el dominio del front, y
+  el backend tiene que estar en HTTPS.
 
 ### 2026-10-16
 - Rama `feature/cuestionarios-nota-visible` (desde `master`, que ya tenía los
