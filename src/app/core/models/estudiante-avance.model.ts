@@ -35,7 +35,9 @@ export interface CalificacionItem {
   moduloId: number;
   moduloTitulo: string;
   puntajeMaximo: number;
+  // null si no está calificada o si es un cuestionario con la nota oculta por el profesor.
   nota: number | null;
+  notaSobre5: number | null;
   estado: EstadoCalificacion;
   fechaEntrega: string | null;
   fechaCalificacion: string | null;
@@ -47,8 +49,11 @@ export interface CalificacionesCurso {
   cursoTitulo: string;
   fechaInicio: string | null;
   fechaFin: string | null;
-  // Suman solo los ítems ya calificados: un curso sin nada calificado llega como 0 / 0.
+  // Suman solo los ítems ya calificados (y no los cuestionarios con la nota oculta):
+  // un curso sin nada calificado llega como 0 / 0.
   puntajeObtenido: number;
   puntajeMaximoCalificado: number;
+  // Total del curso en escala 0,0–5,0; null si todavía no hay nada calificado.
+  notaSobre5: number | null;
   items: CalificacionItem[];
 }

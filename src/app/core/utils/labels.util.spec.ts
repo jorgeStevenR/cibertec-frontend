@@ -1,4 +1,4 @@
-import { formatearPuntaje, porcentajePuntaje } from './labels.util';
+import { formatearNotaSobre5, formatearPuntaje } from './labels.util';
 
 describe('formatearPuntaje', () => {
   it('muestra los enteros sin decimales', () => {
@@ -12,17 +12,10 @@ describe('formatearPuntaje', () => {
   });
 });
 
-describe('porcentajePuntaje', () => {
-  it('calcula el porcentaje entero', () => {
-    expect(porcentajePuntaje(35, 40)).toBe(88);
-    expect(porcentajePuntaje(19, 30)).toBe(63);
-  });
-
-  it('devuelve null si todavía no hay nada calificado (0 / 0)', () => {
-    expect(porcentajePuntaje(0, 0)).toBeNull();
-  });
-
-  it('un curso calificado con nota cero da 0%, no null', () => {
-    expect(porcentajePuntaje(0, 20)).toBe(0);
+describe('formatearNotaSobre5', () => {
+  it('siempre muestra un decimal con coma', () => {
+    expect(formatearNotaSobre5(5)).toBe('5,0');
+    expect(formatearNotaSobre5(0)).toBe('0,0');
+    expect(formatearNotaSobre5(4.2)).toBe('4,2');
   });
 });

@@ -16,9 +16,14 @@ import {
 } from '@angular/core';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { CuestionarioService } from '../../../../core/services/cuestionario.service';
-import { CuestionarioDetalle, IntentoDetalle, RespuestaEnvio } from '../../../../core/models/cuestionario.model';
+import { CuestionarioDetalle, IntentoDetalle, Pregunta, RespuestaEnvio } from '../../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../../core/utils/http-error.util';
-import { formatearFecha, formatearPuntaje } from '../../../../core/utils/labels.util';
+import { formatearFecha, formatearNotaSobre5, formatearPuntaje } from '../../../../core/utils/labels.util';
+import {
+  ResultadoIntentoEstudiante,
+  estaRespondida,
+  resultadoIntentoEstudiante,
+} from '../../../../core/utils/cuestionario.util';
 
 @Component({
   selector: 'app-cuestionario-responder',
@@ -35,6 +40,7 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
   @Output() respondido = new EventEmitter<IntentoDetalle>();
 
   @ViewChild('botonCerrar') private botonCerrar?: ElementRef<HTMLButtonElement>;
+  @ViewChild('enunciadoActual') private enunciadoActual?: ElementRef<HTMLElement>;
 
   private readonly cuestionarioService = inject(CuestionarioService);
   private readonly documento = inject(DOCUMENT);
@@ -43,6 +49,7 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
 
   readonly formatearFecha = formatearFecha;
   readonly formatearPuntaje = formatearPuntaje;
+  readonly formatearNotaSobre5 = formatearNotaSobre5;
   // Mismo tope que valida el backend para una respuesta abierta.
   readonly maxCaracteresAbierta = 5000;
 
@@ -55,6 +62,8 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
   // Opción elegida en cada pregunta cerrada y texto escrito en cada abierta, por id de pregunta.
   readonly respuestas = signal<Record<number, number>>({});
   readonly textos = signal<Record<number, string>>({});
+  // Índice de la pregunta que se está mostrando.
+  readonly indiceActual = signal(0);
   readonly confirmEnviarAbierto = signal(false);
   readonly enviando = signal(false);
 
@@ -147,15 +156,41 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
     return !!c && !this.estaDisponible() && c.preguntas.length > 0;
   }
 
-  // Una abierta cuenta como respondida si tiene texto que no sea solo espacios.
-  totalRespondidas(): number {
-    const cerradas = Object.keys(this.respuestas()).length;
-    const abiertas = Object.values(this.textos()).filter((t) => t.trim() !== '').length;
-    return cerradas + abiertas;
+  // --- Navegación: una pregunta por pantalla ---
+
+  preguntaActual(): Pregunta | null {
+    return this.cuestionario()?.preguntas[this.indiceActual()] ?? null;
   }
 
+  esUltima(): boolean {
+    return this.indiceActual() === this.totalPreguntas() - 1;
+  }
+
+  irA(indice: number): void {
+    if (indice < 0 || indice >= this.totalPreguntas()) {
+      return;
+    }
+    this.indiceActual.set(indice);
+    // Para lectores de pantalla y teclado: el foco pasa al enunciado de la pregunta nueva.
+    setTimeout(() => this.enunciadoActual?.nativeElement.focus());
+  }
+
+  respondida(pregunta: Pregunta): boolean {
+    return estaRespondida(pregunta, this.respuestas(), this.textos());
+  }
+
+  totalRespondidas(): number {
+    return this.cuestionario()?.preguntas.filter((p) => this.respondida(p)).length ?? 0;
+  }
+
+  // Se puede ir y volver cambiando respuestas; "Finalizar" pide todas respondidas.
   puedeEnviar(): boolean {
     return this.totalPreguntas() > 0 && this.totalRespondidas() === this.totalPreguntas();
+  }
+
+  // Lo que el estudiante puede ver de su intento enviado (nota, en revisión u oculta).
+  resultado(intento: IntentoDetalle): ResultadoIntentoEstudiante {
+    return resultadoIntentoEstudiante(intento);
   }
 
   pedirEnviar(): void {

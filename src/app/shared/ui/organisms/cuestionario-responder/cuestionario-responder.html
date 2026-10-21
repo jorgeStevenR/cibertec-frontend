@@ -10,19 +10,25 @@
     <p *ngIf="error()" class="cr-error">{{ error() }}</p>
     <p *ngIf="cargando()" class="cr-estado">Cargando…</p>
 
-    <!-- Ya respondió: mostrar revisión -->
+    <!-- Ya finalizó: nota y revisión, solo "en revisión", o solo la confirmación si el profesor oculta la nota -->
     <div class="cr-body" *ngIf="!cargando() && miIntento() as intento">
-      <div class="cr-nota-final" *ngIf="intento.nota !== null; else notaPendiente">
-        Tu nota: <strong>{{ formatearPuntaje(intento.nota) }} / {{ formatearPuntaje(intento.puntajeMaximo) }}</strong>
-      </div>
-      <ng-template #notaPendiente>
-        <div class="cr-nota-final cr-nota-pendiente">
+      <ng-container [ngSwitch]="resultado(intento)">
+        <div *ngSwitchCase="'visible'" class="cr-nota-final" role="status">
+          Tu nota: <strong>{{ formatearNotaSobre5(intento.notaSobre5 ?? 0) }} / 5,0</strong>
+          <span class="cr-nota-puntos">
+            ({{ formatearPuntaje(intento.nota ?? 0) }} de {{ formatearPuntaje(intento.puntajeMaximo) }} pts)
+          </span>
+        </div>
+        <div *ngSwitchCase="'en-revision'" class="cr-nota-final cr-nota-pendiente" role="status">
           Tus respuestas se enviaron. <strong>Tu nota está pendiente</strong>: el profesor todavía tiene que calificar
           las preguntas abiertas.
         </div>
-      </ng-template>
+        <div *ngSwitchCase="'oculta'" class="cr-nota-final cr-nota-pendiente" role="status">
+          <strong>Tus respuestas se enviaron.</strong> El profesor publicará la nota más adelante.
+        </div>
+      </ng-container>
 
-      <ul class="cr-preguntas-list">
+      <ul class="cr-preguntas-list" *ngIf="intento.preguntas.length > 0">
         <li *ngFor="let p of intento.preguntas">
           <p class="cr-enunciado">{{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span></p>
           <ng-container *ngIf="p.tipo === 'ABIERTA'">
@@ -87,53 +93,94 @@
         El profesor todavía no agregó preguntas a este cuestionario.
       </p>
 
-      <ng-container *ngIf="c.preguntas.length > 0">
+      <ng-container *ngIf="c.preguntas.length > 0 && preguntaActual() as p">
         <p class="cr-ayuda">
-          Respondé todas las preguntas y tocá "Enviar" al final. No vas a poder cambiar tus respuestas después.
+          Podés ir y volver entre las preguntas y cambiar tus respuestas. Cuando termines, tocá "Finalizar": después
+          ya no vas a poder cambiarlas.
           <ng-container *ngIf="tieneAbiertas()">
-            Las preguntas abiertas las califica el profesor, así que tu nota aparecerá cuando las revise.
+            Las preguntas abiertas las califica el profesor.
           </ng-container>
         </p>
 
-        <ul class="cr-preguntas-list">
-          <li *ngFor="let p of c.preguntas">
-            <p class="cr-enunciado" [id]="'cr-enunciado-' + p.id">
-              {{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span>
-            </p>
-            <div class="cr-abierta" *ngIf="p.tipo === 'ABIERTA'">
-              <label class="sr-only" [for]="'cr-texto-' + p.id">Tu respuesta</label>
-              <textarea
-                [id]="'cr-texto-' + p.id"
-                rows="4"
-                [maxLength]="maxCaracteresAbierta"
-                [attr.aria-describedby]="'cr-enunciado-' + p.id"
-                placeholder="Escribe tu respuesta…"
-                [value]="textos()[p.id] ?? ''"
-                (input)="escribirRespuesta(p.id, $any($event.target).value)"
-              ></textarea>
-            </div>
-            <ul class="cr-opciones-list cr-opciones-form" *ngIf="p.tipo !== 'ABIERTA'">
-              <li *ngFor="let o of p.opciones">
-                <label>
-                  <input
-                    type="radio"
-                    [name]="'pregunta-' + p.id"
-                    [checked]="respuestas()[p.id] === o.id"
-                    (change)="elegirOpcion(p.id, o.id)"
-                  />
-                  {{ o.texto }}
-                </label>
-              </li>
-            </ul>
-          </li>
-        </ul>
+        <!-- Grilla para saltar a cualquier pregunta y ver cuáles faltan -->
+        <nav class="cr-grilla" aria-label="Preguntas del cuestionario">
+          <button
+            *ngFor="let q of c.preguntas; let i = index"
+            type="button"
+            class="cr-grilla-btn"
+            [class.actual]="i === indiceActual()"
+            [class.respondida]="respondida(q)"
+            [attr.aria-current]="i === indiceActual() ? 'step' : null"
+            [attr.aria-label]="'Pregunta ' + (i + 1) + (respondida(q) ? ', respondida' : ', sin responder')"
+            (click)="irA(i)"
+          >
+            {{ i + 1 }}
+          </button>
+        </nav>
 
-        <div class="cr-enviar-row">
+        <section class="cr-pregunta-actual" [attr.aria-labelledby]="'cr-enunciado-' + p.id">
+          <p class="cr-contador">Pregunta {{ indiceActual() + 1 }} de {{ totalPreguntas() }}</p>
+          <p class="cr-enunciado" #enunciadoActual tabindex="-1" [id]="'cr-enunciado-' + p.id">
+            {{ p.enunciado }} <span class="cr-puntaje">({{ p.puntaje }} pts)</span>
+          </p>
+
+          <div class="cr-abierta" *ngIf="p.tipo === 'ABIERTA'">
+            <label class="sr-only" [for]="'cr-texto-' + p.id">Tu respuesta</label>
+            <textarea
+              [id]="'cr-texto-' + p.id"
+              rows="5"
+              [maxLength]="maxCaracteresAbierta"
+              [attr.aria-describedby]="'cr-enunciado-' + p.id"
+              placeholder="Escribe tu respuesta…"
+              [value]="textos()[p.id] ?? ''"
+              (input)="escribirRespuesta(p.id, $any($event.target).value)"
+            ></textarea>
+          </div>
+
+          <ul
+            class="cr-opciones-list cr-opciones-form"
+            *ngIf="p.tipo !== 'ABIERTA'"
+            role="radiogroup"
+            [attr.aria-labelledby]="'cr-enunciado-' + p.id"
+          >
+            <li *ngFor="let o of p.opciones">
+              <label>
+                <input
+                  type="radio"
+                  [name]="'pregunta-' + p.id"
+                  [checked]="respuestas()[p.id] === o.id"
+                  (change)="elegirOpcion(p.id, o.id)"
+                />
+                {{ o.texto }}
+              </label>
+            </li>
+          </ul>
+        </section>
+
+        <div class="cr-navegacion">
+          <button type="button" class="cr-btn-nav" [disabled]="indiceActual() === 0" (click)="irA(indiceActual() - 1)">
+            ← Anterior
+          </button>
           <span class="cr-progreso">{{ totalRespondidas() }} / {{ totalPreguntas() }} respondidas</span>
-          <button type="button" class="cr-btn-enviar" [disabled]="!puedeEnviar()" (click)="pedirEnviar()">
-            Enviar respuestas
+          <button *ngIf="!esUltima()" type="button" class="cr-btn-nav" (click)="irA(indiceActual() + 1)">
+            Siguiente →
+          </button>
+          <button
+            *ngIf="esUltima()"
+            type="button"
+            class="cr-btn-enviar"
+            [disabled]="!puedeEnviar()"
+            [attr.aria-describedby]="!puedeEnviar() ? 'cr-faltan' : null"
+            (click)="pedirEnviar()"
+          >
+            Finalizar
           </button>
         </div>
+        <p *ngIf="esUltima() && !puedeEnviar()" id="cr-faltan" class="cr-faltan">
+          Te faltan {{ totalPreguntas() - totalRespondidas() }}
+          {{ totalPreguntas() - totalRespondidas() === 1 ? 'pregunta' : 'preguntas' }} por responder: son las que
+          no están marcadas en la grilla de arriba.
+        </p>
       </ng-container>
     </div>
   </div>
@@ -141,9 +188,9 @@
 
 <confirm-dialog
   [open]="confirmEnviarAbierto()"
-  title="Enviar respuestas"
-  message="¿Seguro que quieres enviar tus respuestas? No vas a poder cambiarlas después."
-  confirmLabel="Enviar"
+  title="Finalizar cuestionario"
+  message="¿Seguro que quieres finalizar? Se envían tus respuestas y ya no vas a poder cambiarlas."
+  confirmLabel="Finalizar"
   [loading]="enviando()"
   (confirmed)="confirmarEnviar()"
   (cancelled)="confirmEnviarAbierto.set(false)"

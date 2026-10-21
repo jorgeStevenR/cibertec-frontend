@@ -169,7 +169,10 @@
                   <ui-button variant="secondary" [fullWidth]="false" (pressed)="verMiEntrega(entrega)">Ver archivo</ui-button>
                 </div>
                 <div class="entrega-estado calificada" *ngIf="entrega.nota != null">
-                  <span class="badge badge-on">Calificado: {{ entrega.nota }} / {{ act.puntajeMaximo }}</span>
+                  <span class="badge badge-on">
+                    Nota: {{ entrega.notaSobre5 !== null ? formatearNotaSobre5(entrega.notaSobre5) + ' / 5,0' : '—' }}
+                  </span>
+                  <span class="entrega-detalle">{{ formatearPuntaje(entrega.nota) }} de {{ act.puntajeMaximo }} pts</span>
                   <p class="entrega-comentario" *ngIf="entrega.comentarioDocente">{{ entrega.comentarioDocente }}</p>
                   <ui-button variant="secondary" [fullWidth]="false" (pressed)="verMiEntrega(entrega)">Ver archivo</ui-button>
                 </div>
@@ -214,16 +217,17 @@
                     <ng-container *ngIf="cq.tiempoLimiteMinutos"> · {{ cq.tiempoLimiteMinutos }} min</ng-container>
                     <ng-container [ngSwitch]="estado.tipo">
                       <span *ngSwitchCase="'respondido'" class="badge badge-on">
-                        Respondido<ng-container *ngIf="estado.tipo === 'respondido'">: {{ estado.nota }} / {{ estado.puntajeMaximo }}</ng-container>
+                        Nota<ng-container *ngIf="estado.tipo === 'respondido'">: {{ formatearNotaSobre5(estado.notaSobre5) }} / 5,0</ng-container>
                       </span>
                       <span *ngSwitchCase="'en-revision'" class="badge">Enviado · nota en revisión</span>
+                      <span *ngSwitchCase="'enviado'" class="badge">Enviado</span>
                       <span *ngSwitchCase="'pendiente'" class="badge">Sin responder</span>
                       <span *ngSwitchCase="'no-disponible'" class="badge">No disponible</span>
                     </ng-container>
                   </span>
                 </div>
                 <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirCuestionario(cq)">
-                  {{ estado.tipo === 'respondido' || estado.tipo === 'en-revision' ? 'Ver revisión' : 'Abrir' }}
+                  {{ estado.tipo === 'respondido' || estado.tipo === 'en-revision' ? 'Ver revisión' : estado.tipo === 'enviado' ? 'Ver envío' : 'Abrir' }}
                 </ui-button>
               </ng-container>
             </li>

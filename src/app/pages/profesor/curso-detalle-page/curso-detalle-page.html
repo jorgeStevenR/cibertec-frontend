@@ -462,6 +462,20 @@
       [control]="cuestionarioForm.controls.tiempoLimiteMinutos"
     ></form-field>
 
+    <label class="checkbox-row" for="cuestionario-mostrar-nota">
+      <input
+        type="checkbox"
+        id="cuestionario-mostrar-nota"
+        aria-describedby="cuestionario-mostrar-nota-ayuda"
+        [formControl]="cuestionarioForm.controls.mostrarNota"
+      />
+      Mostrar la nota al estudiante cuando finalice
+    </label>
+    <p class="cuestionario-nota" id="cuestionario-mostrar-nota-ayuda">
+      Si está apagado, el estudiante solo ve que sus respuestas se enviaron (sin nota ni correcciones). Lo puedes
+      activar después, por ejemplo cuando todos hayan terminado: desde ese momento verán su nota.
+    </p>
+
     <p class="cuestionario-nota" *ngIf="cuestionarioModoEdicion()">
       Las preguntas se administran aparte, desde "Preguntas y resultados".
     </p>

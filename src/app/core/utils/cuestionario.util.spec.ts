@@ -1,11 +1,13 @@
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
-import { Cuestionario, IntentoDetalle } from '../models/cuestionario.model';
+import { Cuestionario, IntentoDetalle, PreguntaConRespuesta } from '../models/cuestionario.model';
 import {
   construirPreguntaRequest,
   correctaValidator,
   estadoCuestionarioEstudiante,
+  estaRespondida,
   leerPuntaje,
   reindexarCorrecta,
+  resultadoIntentoEstudiante,
 } from './cuestionario.util';
 
 const cuestionario = (disponible?: boolean | null): Cuestionario => ({
@@ -19,7 +21,20 @@ const cuestionario = (disponible?: boolean | null): Cuestionario => ({
   puntajeMaximo: 10,
   fechaCreacion: '2026-09-01T10:00:00',
   disponible,
+  mostrarNota: true,
 });
+
+const pregunta: PreguntaConRespuesta = {
+  id: 1,
+  tipo: 'OPCION_MULTIPLE',
+  enunciado: '¿?',
+  puntaje: 10,
+  orden: 0,
+  opciones: [],
+  opcionElegidaId: null,
+  textoRespuesta: null,
+  puntajeObtenido: null,
+};
 
 const intento: IntentoDetalle = {
   id: 7,
@@ -29,9 +44,11 @@ const intento: IntentoDetalle = {
   estudianteEmail: null,
   nota: 8,
   puntajeMaximo: 10,
+  notaSobre5: 4,
+  notaVisible: true,
   estado: 'CALIFICADO',
   fechaEntrega: '2026-09-02T10:00:00',
-  preguntas: [],
+  preguntas: [pregunta],
 };
 
 describe('correctaValidator', () => {
@@ -164,19 +181,36 @@ describe('reindexarCorrecta', () => {
   });
 });
 
-describe('estadoCuestionarioEstudiante', () => {
-  it('respondido gana sobre cualquier disponibilidad', () => {
-    expect(estadoCuestionarioEstudiante(cuestionario(false), intento)).toEqual({
-      tipo: 'respondido',
-      nota: 8,
-      puntajeMaximo: 10,
-    });
+// Lo que manda el backend al estudiante según el caso (ver contrato "Nota sobre 5").
+const pendiente: IntentoDetalle = { ...intento, nota: null, notaSobre5: null, notaVisible: false, estado: 'PENDIENTE_REVISION' };
+const oculto: IntentoDetalle = { ...intento, nota: null, notaSobre5: null, notaVisible: false, preguntas: [] };
+
+describe('resultadoIntentoEstudiante', () => {
+  it('visible con la nota publicada', () => {
+    expect(resultadoIntentoEstudiante(intento)).toBe('visible');
   });
 
-  it('en revisión si el intento llegó sin nota (abiertas sin calificar)', () => {
-    expect(estadoCuestionarioEstudiante(cuestionario(true), { ...intento, nota: null, estado: 'PENDIENTE_REVISION' })).toEqual({
-      tipo: 'en-revision',
-    });
+  it('en revisión si el profesor muestra notas pero faltan abiertas por calificar', () => {
+    expect(resultadoIntentoEstudiante(pendiente)).toBe('en-revision');
+  });
+
+  it('oculta si el profesor no muestra la nota (llegan las preguntas vacías)', () => {
+    expect(resultadoIntentoEstudiante(oculto)).toBe('oculta');
+    expect(resultadoIntentoEstudiante({ ...oculto, estado: 'PENDIENTE_REVISION' })).toBe('oculta');
+  });
+});
+
+describe('estadoCuestionarioEstudiante', () => {
+  it('respondido con la nota sobre 5, gane sobre cualquier disponibilidad', () => {
+    expect(estadoCuestionarioEstudiante(cuestionario(false), intento)).toEqual({ tipo: 'respondido', notaSobre5: 4 });
+  });
+
+  it('en revisión si faltan abiertas por calificar', () => {
+    expect(estadoCuestionarioEstudiante(cuestionario(true), pendiente)).toEqual({ tipo: 'en-revision' });
+  });
+
+  it('enviado (sin nota) si el profesor la oculta', () => {
+    expect(estadoCuestionarioEstudiante(cuestionario(true), oculto)).toEqual({ tipo: 'enviado' });
   });
 
   it('no disponible solo con un false explícito', () => {
@@ -190,5 +224,21 @@ describe('estadoCuestionarioEstudiante', () => {
 
   it('desconocido si todavía no se consultó el intento', () => {
     expect(estadoCuestionarioEstudiante(cuestionario(true), undefined)).toEqual({ tipo: 'desconocido' });
+  });
+});
+
+describe('estaRespondida', () => {
+  const cerrada = { id: 1, tipo: 'OPCION_MULTIPLE' as const };
+  const abierta = { id: 2, tipo: 'ABIERTA' as const };
+
+  it('una cerrada cuenta si tiene una opción elegida', () => {
+    expect(estaRespondida(cerrada, { 1: 10 }, {})).toBe(true);
+    expect(estaRespondida(cerrada, {}, {})).toBe(false);
+  });
+
+  it('una abierta cuenta solo con texto que no sea espacios', () => {
+    expect(estaRespondida(abierta, {}, { 2: 'Mi respuesta' })).toBe(true);
+    expect(estaRespondida(abierta, {}, { 2: '   ' })).toBe(false);
+    expect(estaRespondida(abierta, {}, {})).toBe(false);
   });
 });

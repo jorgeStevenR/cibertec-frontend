@@ -33,12 +33,10 @@ export function formatearPuntaje(valor: number): string {
   return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
 }
 
-// Porcentaje entero de lo obtenido sobre lo calificado; null si todavía no hay nada calificado.
-export function porcentajePuntaje(obtenido: number, maximoCalificado: number): number | null {
-  if (maximoCalificado <= 0) {
-    return null;
-  }
-  return Math.round((obtenido / maximoCalificado) * 100);
+// Nota en escala 0,0–5,0 (ya calculada por el backend): siempre con un decimal y
+// coma, como se escribe en Colombia ("4,2", "5,0").
+export function formatearNotaSobre5(valor: number): string {
+  return valor.toFixed(1).replace('.', ',');
 }
 
 export function formatearFecha(iso: string): string {

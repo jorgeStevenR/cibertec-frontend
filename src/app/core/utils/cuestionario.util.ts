@@ -1,5 +1,5 @@
 import { AbstractControl, FormArray, ValidationErrors, ValidatorFn } from '@angular/forms';
-import { Cuestionario, IntentoDetalle, PreguntaRequest, TipoPregunta } from '../models/cuestionario.model';
+import { Cuestionario, IntentoDetalle, Pregunta, PreguntaRequest, TipoPregunta } from '../models/cuestionario.model';
 
 export const TIPO_PREGUNTA_LABELS: Record<TipoPregunta, string> = {
   OPCION_MULTIPLE: 'Opción múltiple',
@@ -86,13 +86,32 @@ export function leerPuntaje(texto: string): number | null {
 }
 
 /**
+ * Qué puede ver el estudiante de un intento que ya envió:
+ * - `visible`: la nota (sobre 5) y la revisión de sus respuestas.
+ * - `en-revision`: el profesor muestra la nota, pero todavía falta calificar abiertas.
+ * - `oculta`: el profesor no muestra la nota (mostrarNota false). El backend
+ *   tampoco manda las respuestas, así que solo hay una confirmación de envío.
+ */
+export type ResultadoIntentoEstudiante = 'visible' | 'en-revision' | 'oculta';
+
+export function resultadoIntentoEstudiante(intento: IntentoDetalle): ResultadoIntentoEstudiante {
+  if (intento.notaVisible && intento.notaSobre5 !== null) {
+    return 'visible';
+  }
+  // Un intento enviado siempre tiene preguntas: si vienen vacías es porque el
+  // profesor ocultó la nota (el backend no expone mostrarNota en el intento).
+  return intento.preguntas.length === 0 ? 'oculta' : 'en-revision';
+}
+
+/**
  * Estado de un cuestionario en la lista del estudiante.
  * - `undefined` en el intento = todavía no se consultó (o falló la consulta).
  * - `null` = se consultó y el estudiante no respondió (404 en mi-intento).
  */
 export type EstadoCuestionarioEstudiante =
-  | { tipo: 'respondido'; nota: number; puntajeMaximo: number }
+  | { tipo: 'respondido'; notaSobre5: number }
   | { tipo: 'en-revision' }
+  | { tipo: 'enviado' }
   | { tipo: 'no-disponible' }
   | { tipo: 'pendiente' }
   | { tipo: 'desconocido' };
@@ -102,14 +121,30 @@ export function estadoCuestionarioEstudiante(
   intento: IntentoDetalle | null | undefined,
 ): EstadoCuestionarioEstudiante {
   if (intento) {
-    // Con respuestas abiertas sin calificar el backend no manda la nota.
-    return intento.nota === null
-      ? { tipo: 'en-revision' }
-      : { tipo: 'respondido', nota: intento.nota, puntajeMaximo: intento.puntajeMaximo };
+    const resultado = resultadoIntentoEstudiante(intento);
+    if (resultado === 'visible' && intento.notaSobre5 !== null) {
+      return { tipo: 'respondido', notaSobre5: intento.notaSobre5 };
+    }
+    return resultado === 'oculta' ? { tipo: 'enviado' } : { tipo: 'en-revision' };
   }
   // Fail-open con "disponible" (ver modelo): solo un false explícito lo bloquea.
   if (cuestionario.disponible === false) {
     return { tipo: 'no-disponible' };
   }
   return intento === null ? { tipo: 'pendiente' } : { tipo: 'desconocido' };
+}
+
+/**
+ * Si el estudiante ya respondió una pregunta mientras arma su intento: una
+ * cerrada, si eligió una opción; una abierta, si escribió algo que no sea solo espacios.
+ */
+export function estaRespondida(
+  pregunta: Pick<Pregunta, 'id' | 'tipo'>,
+  opcionesElegidas: Record<number, number>,
+  textos: Record<number, string>,
+): boolean {
+  if (pregunta.tipo === 'ABIERTA') {
+    return (textos[pregunta.id] ?? '').trim() !== '';
+  }
+  return opcionesElegidas[pregunta.id] !== undefined;
 }

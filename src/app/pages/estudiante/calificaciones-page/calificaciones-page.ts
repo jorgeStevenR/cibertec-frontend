@@ -12,8 +12,8 @@ import {
   ESTADO_CALIFICACION_LABELS,
   TIPO_ITEM_LABELS,
   formatearFecha,
+  formatearNotaSobre5,
   formatearPuntaje,
-  porcentajePuntaje,
 } from '../../../core/utils/labels.util';
 
 @Component({
@@ -31,6 +31,7 @@ export class EstudianteCalificacionesPage implements OnInit {
   readonly cargando = signal(false);
   readonly error = signal('');
 
+  readonly formatearNotaSobre5 = formatearNotaSobre5;
   readonly formatearPuntaje = formatearPuntaje;
   readonly formatearRangoFechas = formatearRangoFechas;
 
@@ -72,19 +73,23 @@ export class EstudianteCalificacionesPage implements OnInit {
   }
 
   // Un cuestionario "entregado" es uno con respuestas abiertas que el profesor
-  // todavía no calificó: "En revisión" lo explica mejor que "Entregada".
+  // todavía no calificó: "En revisión" lo explica mejor que "Entregada". Uno
+  // "rendido" sin nota es uno en el que el profesor decidió no mostrarla.
   etiquetaEstado(item: CalificacionItem): string {
     if (item.tipo === 'CUESTIONARIO' && item.estado === 'ENTREGADA') {
       return 'En revisión';
     }
+    if (item.tipo === 'CUESTIONARIO' && item.estado === 'RENDIDO' && item.nota === null) {
+      return 'Nota no publicada';
+    }
     return ESTADO_CALIFICACION_LABELS[item.estado];
   }
 
-  porcentaje(curso: CalificacionesCurso): number | null {
-    return porcentajePuntaje(curso.puntajeObtenido, curso.puntajeMaximoCalificado);
-  }
-
+  // "4,2 / 5,0 · 17 de 20 pts": la nota que cuenta y, al lado, los puntos de los que sale.
   private textoNota(item: CalificacionItem): string {
-    return item.nota == null ? '—' : `${formatearPuntaje(item.nota)} / ${formatearPuntaje(item.puntajeMaximo)}`;
+    if (item.nota === null || item.notaSobre5 === null) {
+      return '—';
+    }
+    return `${formatearNotaSobre5(item.notaSobre5)} / 5,0 · ${formatearPuntaje(item.nota)} de ${formatearPuntaje(item.puntajeMaximo)} pts`;
   }
 }

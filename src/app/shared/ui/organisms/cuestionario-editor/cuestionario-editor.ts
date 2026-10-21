@@ -29,7 +29,7 @@ import {
   TipoPregunta,
 } from '../../../../core/models/cuestionario.model';
 import { extraerMensajeError } from '../../../../core/utils/http-error.util';
-import { formatearFecha, formatearPuntaje } from '../../../../core/utils/labels.util';
+import { formatearFecha, formatearNotaSobre5, formatearPuntaje } from '../../../../core/utils/labels.util';
 import {
   OPCIONES_VERDADERO_FALSO,
   TIPO_PREGUNTA_LABELS,
@@ -46,6 +46,12 @@ type OpcionFormGroup = FormGroup<{
 
 // Rechaza textos hechos solo de espacios (el backend recibe el valor recortado).
 const NO_VACIO = Validators.pattern(/\S/);
+
+// "2,5 / 5,0 · 2 de 4 pts". Al profesor siempre le llega la nota (parcial si faltan abiertas por calificar).
+function textoNotaIntento(notaSobre5: number | null, nota: number, puntajeMaximo: number): string {
+  const puntos = `${formatearPuntaje(nota)} de ${formatearPuntaje(puntajeMaximo)} pts`;
+  return notaSobre5 === null ? puntos : `${formatearNotaSobre5(notaSobre5)} / 5,0 · ${puntos}`;
+}
 
 @Component({
   selector: 'app-cuestionario-editor',
@@ -68,6 +74,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   readonly formatearFecha = formatearFecha;
   readonly formatearPuntaje = formatearPuntaje;
+  readonly textoNotaIntento = textoNotaIntento;
   readonly tipoLabels = TIPO_PREGUNTA_LABELS;
   readonly tipos: TipoPregunta[] = ['OPCION_MULTIPLE', 'VERDADERO_FALSO', 'ABIERTA'];
 
@@ -81,7 +88,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
 
   readonly intentoColumnas: DataTableColumn<IntentoResumen>[] = [
     { key: 'estudiante', label: 'Estudiante', format: (i) => i.estudianteNombre || `Estudiante #${i.estudianteId}` },
-    { key: 'nota', label: 'Nota', format: (i) => `${formatearPuntaje(i.nota)} / ${formatearPuntaje(i.puntajeMaximo)}` },
+    { key: 'nota', label: 'Nota', format: (i) => textoNotaIntento(i.notaSobre5, i.nota, i.puntajeMaximo) },
     { key: 'estado', label: 'Estado' },
     { key: 'fecha', label: 'Respondido', format: (i) => this.formatearFecha(i.fechaEntrega) },
     { key: 'acciones', label: '' },
@@ -383,7 +390,9 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
         // La lista de resultados refleja la nota y el estado nuevos sin pedirla de nuevo.
         this.intentos.set(
           this.intentos().map((i) =>
-            i.id === actualizado.id ? { ...i, nota: actualizado.nota ?? i.nota, estado: actualizado.estado } : i,
+            i.id === actualizado.id
+              ? { ...i, nota: actualizado.nota ?? i.nota, notaSobre5: actualizado.notaSobre5, estado: actualizado.estado }
+              : i,
           ),
         );
       },

@@ -15,6 +15,9 @@ export interface Cuestionario {
   // valores: disponible / todavía-no-abre (preguntas=[]) / venció (preguntas
   // con contenido) — ver CuestionarioResponderComponent.noAbierto()/vencido().
   disponible?: boolean | null;
+  // Si el estudiante ve su nota y la revisión al finalizar. El profesor lo puede
+  // cambiar en cualquier momento (vale también para los intentos ya enviados).
+  mostrarNota: boolean;
 }
 
 export interface CuestionarioRequest {
@@ -23,6 +26,7 @@ export interface CuestionarioRequest {
   fechaApertura: string | null;
   fechaEntrega: string | null;
   tiempoLimiteMinutos: number | null;
+  mostrarNota: boolean;
 }
 
 // OPCION_MULTIPLE y VERDADERO_FALSO se corrigen solas; ABIERTA la califica el
@@ -83,6 +87,8 @@ export interface IntentoResumen {
   // Al profesor siempre le llega (parcial si el intento está PENDIENTE_REVISION).
   nota: number;
   puntajeMaximo: number;
+  // Nota en escala 0,0–5,0 calculada por el backend (los puntos se siguen guardando).
+  notaSobre5: number | null;
   estado: EstadoIntento;
   fechaEntrega: string;
 }
@@ -105,8 +111,12 @@ export interface PreguntaConRespuesta extends Omit<Pregunta, 'opciones' | 'cuest
 }
 
 export interface IntentoDetalle extends Omit<IntentoResumen, 'nota'> {
-  // null cuando se le muestra al estudiante un intento PENDIENTE_REVISION: el
-  // backend no manda la nota parcial.
+  // Al estudiante: null (igual que notaSobre5) mientras notaVisible sea false.
   nota: number | null;
+  // mostrarNota del cuestionario && estado CALIFICADO. Al profesor le indica si
+  // el estudiante ya la está viendo.
+  notaVisible: boolean;
+  // Al estudiante viene vacía si el profesor oculta la nota (mostrarNota false):
+  // ni lo que respondió ni cuál era la correcta.
   preguntas: PreguntaConRespuesta[];
 }

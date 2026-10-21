@@ -177,6 +177,13 @@ usuario del gestor (avisos de permiso por columna, programas del profesor).
 Cuentas: `marco.aguilar`/`camila.torres` (`Sim12345!`), curso 31; nombrar
 "PRUEBA …" lo que se cree y borrarlo.
 
+**Recorrer en el navegador lo del 2026-10-16** (API verificada, falta lo
+visual): responder de a una pregunta (grilla, Anterior/Siguiente, "Te faltan
+N", Finalizar; mobile a 375 px y teclado), la casilla "Mostrar la nota" del
+modal del cuestionario, los 3 resultados al finalizar (nota sobre 5 / en
+revisión / solo confirmación), el chip "Enviado", "Nota no publicada" en
+Calificaciones y la nota sobre 5 en entregas y Calificaciones.
+
 Aparte de eso, nada a medio terminar — punto de corte limpio. El rol
 GESTOR_USUARIOS (guard, panel nuevo, `UsuariosPage`/`UsuarioDetallePage`
 compartidos con modo lectura/edición según rol) está implementado y
@@ -317,6 +324,43 @@ próxima sesión antes de dar por cerrado.
 
 ## Log de sesiones
 
+### 2026-10-16
+- Rama `feature/cuestionarios-nota-visible` (desde `master`, que ya tenía los
+  commits del 2026-10-14). Conecta el contrato del backend "Nota sobre 5 y
+  nota visible a criterio del profesor" (`940c059` del repo backend).
+- **Nota sobre 5,0 en todo el front**: la calcula el backend (`notaSobre5`);
+  el front solo la formatea con `formatearNotaSobre5` ("4,2", siempre un
+  decimal y coma) y muestra los puntos al lado como detalle ("4,2 / 5,0 · 2,5
+  de 3 pts"). Lugares: Resultados y revisión del profesor, entregas de
+  actividad (profesor y estudiante), chip del cuestionario, resultado al
+  finalizar y Calificaciones (por ítem y total del curso; el "% de lo
+  calificado" se reemplazó por los puntos y se borró `porcentajePuntaje`,
+  que quedó sin uso). El puntaje que escribe el profesor al calificar sigue
+  en puntos.
+- **`mostrarNota`**: casilla "Mostrar la nota al estudiante cuando finalice"
+  en el modal de crear/editar cuestionario, **apagada por defecto en los
+  nuevos** (pedido del usuario: la nota se ve solo si el profesor lo
+  habilita) y editable después. `resultadoIntentoEstudiante()`
+  (`visible | en-revision | oculta`, con tests) decide qué ve el estudiante:
+  como el intento no trae `mostrarNota`, "oculta" se deduce de `preguntas`
+  vacía (un intento enviado siempre tiene preguntas). Chip nuevo "Enviado"
+  y botón "Ver envío"; en Calificaciones, un cuestionario `RENDIDO` sin nota
+  dice "Nota no publicada". En la revisión del profesor se indica si el
+  estudiante ya ve la nota (`notaVisible`).
+- **Responder una pregunta por pantalla** (`cuestionario-responder`):
+  "Pregunta N de M", grilla de números para saltar a cualquiera (marca las
+  respondidas por fondo y no solo por color, `aria-current`, `aria-label`
+  con el estado), Anterior/Siguiente y "Finalizar" en la última, deshabilitado
+  con el aviso "Te faltan N preguntas" hasta responder todas. Al cambiar de
+  pregunta el foco va al enunciado. En ≤ 480 px el overlay ocupa toda la
+  pantalla. Lógica de "respondida" en `estaRespondida()` con tests.
+- Verificado contra la API (curso 31, módulo 37, "PRUEBA nota visible", 2
+  preguntas, `mostrarNota: false`): enviar → `preguntas: []`, nota null;
+  Calificaciones `ENTREGADA` sin nota; calificar 0.5 → el profesor ve 2.5 y
+  4.2, el estudiante sigue sin verla y Calificaciones pasa a `RENDIDO` sin
+  nota; PUT con `mostrarNota: true` (mismo body que el formulario) → el
+  estudiante ve 2.5 / 4.2. Se borró todo (intento 404). Falta lo visual.
+
 ### 2026-10-14
 - Revisión del alcance contra el plan de práctica (UNIMINUTO): el proyecto es un
   MVP, no una réplica de Moodle. Decisión del usuario: cerrar primero lo que
@@ -379,6 +423,7 @@ próxima sesión antes de dar por cerrado.
   el estudiante solo ve una confirmación; se puede encender después) y
   responder **una pregunta por pantalla** con Anterior/Siguiente, grilla de
   números y "Finalizar". Se le entregó al usuario el prompt del backend.
+  → Implementado el 2026-10-16 (ver log de ese día).
 
 ### 2026-09-30
 - Backend apagado: no se pudieron verificar los endpoints del estudiante (sigue

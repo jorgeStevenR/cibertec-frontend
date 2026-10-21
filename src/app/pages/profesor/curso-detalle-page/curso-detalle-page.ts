@@ -45,7 +45,13 @@ import { PAGINA_MODULO_TITULO_MAX, PaginaModulo } from '../../../core/models/pag
 import { extraerErroresPorCampo, extraerMensajeError } from '../../../core/utils/http-error.util';
 import { moverElemento } from '../../../core/utils/orden.util';
 import { aplanarArbol, armarArbolModulos, idsDelGrupo, moverModulo } from '../../../core/utils/modulo-arbol.util';
-import { TIPO_CONTENIDO_LABELS, formatearFecha, formatearFechaRelativa } from '../../../core/utils/labels.util';
+import {
+  TIPO_CONTENIDO_LABELS,
+  formatearFecha,
+  formatearFechaRelativa,
+  formatearNotaSobre5,
+  formatearPuntaje,
+} from '../../../core/utils/labels.util';
 
 interface ModuloConContenidos {
   modulo: Modulo;
@@ -207,7 +213,10 @@ export class ProfesorCursoDetallePage implements OnInit {
     {
       key: 'nota',
       label: 'Nota',
-      format: (e) => (e.nota != null ? `${e.nota} / ${this.actividadEntregas()?.puntajeMaximo ?? ''}` : 'Sin calificar'),
+      format: (e) =>
+        e.nota != null && e.notaSobre5 != null
+          ? `${formatearNotaSobre5(e.notaSobre5)} / 5,0 · ${formatearPuntaje(e.nota)} de ${this.actividadEntregas()?.puntajeMaximo ?? ''} pts`
+          : 'Sin calificar',
     },
   ];
 
@@ -281,6 +290,7 @@ export class ProfesorCursoDetallePage implements OnInit {
     fechaApertura: [''],
     fechaEntrega: [''],
     tiempoLimiteMinutos: [''],
+    mostrarNota: [false],
   });
 
   readonly confirmEliminarCuestionarioAbierto = signal(false);
@@ -299,6 +309,8 @@ export class ProfesorCursoDetallePage implements OnInit {
       fechaApertura: '',
       fechaEntrega: '',
       tiempoLimiteMinutos: '',
+      // La nota solo se muestra si el profesor lo habilita explícitamente.
+      mostrarNota: false,
     });
     this.cuestionarioModalAbierto.set(true);
   }
@@ -313,6 +325,7 @@ export class ProfesorCursoDetallePage implements OnInit {
       fechaApertura: cuestionario.fechaApertura ? cuestionario.fechaApertura.slice(0, 16) : '',
       fechaEntrega: cuestionario.fechaEntrega ? cuestionario.fechaEntrega.slice(0, 16) : '',
       tiempoLimiteMinutos: cuestionario.tiempoLimiteMinutos != null ? String(cuestionario.tiempoLimiteMinutos) : '',
+      mostrarNota: cuestionario.mostrarNota,
     });
     this.cuestionarioModalAbierto.set(true);
   }
@@ -336,6 +349,7 @@ export class ProfesorCursoDetallePage implements OnInit {
       fechaApertura: valores.fechaApertura ? valores.fechaApertura : null,
       fechaEntrega: valores.fechaEntrega ? valores.fechaEntrega : null,
       tiempoLimiteMinutos: valores.tiempoLimiteMinutos ? Number(valores.tiempoLimiteMinutos) : null,
+      mostrarNota: valores.mostrarNota ?? false,
     };
 
     const editando = this.cuestionarioModoEdicion() ? this.cuestionarioEditando() : null;

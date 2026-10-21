@@ -34,7 +34,7 @@ import { LienzoResumen } from '../../../core/models/lienzo.model';
 import { PaginaModulo } from '../../../core/models/pagina-modulo.model';
 import { extraerMensajeError } from '../../../core/utils/http-error.util';
 import { aplanarArbol, armarArbolModulos } from '../../../core/utils/modulo-arbol.util';
-import { TIPO_CONTENIDO_LABELS, formatearFecha } from '../../../core/utils/labels.util';
+import { TIPO_CONTENIDO_LABELS, formatearFecha, formatearNotaSobre5, formatearPuntaje } from '../../../core/utils/labels.util';
 import {
   EstadoCuestionarioEstudiante,
   estadoCuestionarioEstudiante,
@@ -110,6 +110,8 @@ export class EstudianteCursoDetallePage implements OnInit {
 
   readonly tipoLabels = TIPO_CONTENIDO_LABELS;
   readonly formatearFecha = formatearFecha;
+  readonly formatearNotaSobre5 = formatearNotaSobre5;
+  readonly formatearPuntaje = formatearPuntaje;
 
   readonly tabActiva = signal<Tab>('curso');
   readonly participantes = signal<Matricula[]>([]);

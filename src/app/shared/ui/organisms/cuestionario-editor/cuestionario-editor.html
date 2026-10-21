@@ -202,9 +202,12 @@
       <div class="cq-revision-header">
         <h3>{{ intento.estudianteNombre || 'Estudiante #' + intento.estudianteId }}</h3>
         <span>
-          Nota: <strong>{{ formatearPuntaje(intento.nota ?? 0) }} / {{ formatearPuntaje(intento.puntajeMaximo) }}</strong>
+          Nota: <strong>{{ textoNotaIntento(intento.notaSobre5, intento.nota ?? 0, intento.puntajeMaximo) }}</strong>
           <span class="cq-estado-intento" [class.pendiente]="intento.estado === 'PENDIENTE_REVISION'">
             {{ intento.estado === 'PENDIENTE_REVISION' ? 'Faltan respuestas por calificar' : 'Calificado' }}
+          </span>
+          <span class="cq-visibilidad">
+            {{ intento.notaVisible ? 'El estudiante ya ve esta nota' : 'El estudiante todavía no ve esta nota' }}
           </span>
         </span>
       </div>

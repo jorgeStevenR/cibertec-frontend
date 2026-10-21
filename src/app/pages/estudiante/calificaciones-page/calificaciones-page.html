@@ -21,11 +21,11 @@
       </p>
     </div>
 
-    <div class="puntaje" *ngIf="curso.puntajeMaximoCalificado > 0; else sinCalificar">
-      <span class="puntaje-valor">
-        {{ formatearPuntaje(curso.puntajeObtenido) }} / {{ formatearPuntaje(curso.puntajeMaximoCalificado) }}
+    <div class="puntaje" *ngIf="curso.notaSobre5 !== null; else sinCalificar">
+      <span class="puntaje-valor">{{ formatearNotaSobre5(curso.notaSobre5) }} / 5,0</span>
+      <span class="puntaje-detalle">
+        {{ formatearPuntaje(curso.puntajeObtenido) }} de {{ formatearPuntaje(curso.puntajeMaximoCalificado) }} pts calificados
       </span>
-      <span class="puntaje-detalle">{{ porcentaje(curso) }}% de lo calificado</span>
     </div>
     <ng-template #sinCalificar>
       <span class="sin-calificar">Sin calificaciones todavía</span>
