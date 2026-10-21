@@ -188,7 +188,7 @@
           </span>
         </ng-template>
         <ng-template dataTableCell="acciones" let-intento>
-          <button type="button" class="cq-btn-revisar" (click)="abrirRevision(intento)">
+          <button type="button" class="cq-btn-revisar" [attr.data-intento]="intento.id" (click)="abrirRevision(intento)">
             {{ intento.estado === 'PENDIENTE_REVISION' ? 'Calificar' : 'Ver respuestas' }}
           </button>
         </ng-template>

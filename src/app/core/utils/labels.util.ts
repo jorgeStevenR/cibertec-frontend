@@ -28,9 +28,10 @@ export const ESTADO_CALIFICACION_LABELS: Record<EstadoCalificacion, string> = {
   RENDIDO: 'Rendido',
 };
 
-// 18 -> "18", 17.5 -> "17.5", 17.25 -> "17.3" (una cifra decimal como máximo).
+// 18 -> "18", 17.5 -> "17,5", 17.25 -> "17,3" (una cifra decimal como máximo, con
+// coma como en la nota sobre 5).
 export function formatearPuntaje(valor: number): string {
-  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
+  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1).replace('.', ',');
 }
 
 // Nota en escala 0,0–5,0 (ya calculada por el backend): siempre con un decimal y

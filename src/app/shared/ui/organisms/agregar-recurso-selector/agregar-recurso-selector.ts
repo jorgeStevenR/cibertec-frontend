@@ -23,7 +23,7 @@ const GRUPOS: GrupoRecursos[] = [
     titulo: 'Actividades',
     opciones: [
       { tipo: 'ACTIVIDAD', icono: '📤', nombre: 'Actividad', descripcion: 'Tarea: el estudiante entrega un archivo y tú lo calificas.' },
-      { tipo: 'CUESTIONARIO', icono: '📝', nombre: 'Cuestionario', descripcion: 'Preguntas de opción múltiple con nota automática.' },
+      { tipo: 'CUESTIONARIO', icono: '📝', nombre: 'Cuestionario', descripcion: 'Opción múltiple, verdadero/falso o respuesta abierta.' },
     ],
   },
   {

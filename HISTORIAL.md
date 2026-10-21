@@ -170,31 +170,22 @@ este repo).
 
 ## En progreso
 
-**Recorrer en el navegador los tipos de pregunta (2026-10-14).** La API y el
-código ya se verificaron (ver log del 2026-10-14); falta solo lo **visual**:
-V/F con dos opciones fijas, tipo fijo al editar, "Enviar" deshabilitado
-hasta responder todo, chip "Enviado · nota en revisión", "Por revisar" →
-"Calificado" en Resultados, el mensaje de puntaje fuera de rango, viewport
-angosto (~375 px) y teclado (Escape en la revisión vuelve a Resultados, otro
-Escape cierra; el foco vuelve al disparador). Lo mismo para la ficha de
-usuario del gestor (avisos de permiso por columna, programas del profesor).
-Cuentas: `marco.aguilar`/`camila.torres` (`Sim12345!`), curso 31; nombrar
-"PRUEBA …" lo que se cree y borrarlo.
+**Re-verificar en el navegador los arreglos del 2026-10-21** (el recorrido de
+Claude en Chrome de ese día dio 9 ✅ / 4 ❌; los ❌ se corrigieron pero no se
+volvieron a mirar): decimales con coma ("3,5 de 4 pts", "Calificada con 0,5
+de 1"); foco al abrir/cerrar la revisión del intento, después de "Calificar",
+al cerrar el editor (vuelve a "Preguntas y resultados") y al finalizar el
+estudiante (va al mensaje del resultado); el diálogo "¿Seguro que quieres
+finalizar?" recibe el foco; Escape durante "Abriendo intento…" se queda en
+Resultados; cabecera del editor a 375 px; editar una pregunta lleva la vista
+al formulario. Cuentas: `marco.aguilar`/`camila.torres` (`Sim12345!`), curso
+31, módulo 37; nombrar "PRUEBA …" lo que se cree y borrarlo.
 
-**Recorrer en el navegador lo del 2026-10-16** (API verificada, falta lo
-visual): responder de a una pregunta (grilla, Anterior/Siguiente, "Te faltan
-N", Finalizar; mobile a 375 px y teclado), la casilla "Mostrar la nota" del
-modal del cuestionario, los 3 resultados al finalizar (nota sobre 5 / en
-revisión / solo confirmación), el chip "Enviado", "Nota no publicada" en
-Calificaciones y la nota sobre 5 en entregas y Calificaciones.
-
-Aparte de eso, nada a medio terminar — punto de corte limpio. El rol
-GESTOR_USUARIOS (guard, panel nuevo, `UsuariosPage`/`UsuarioDetallePage`
-compartidos con modo lectura/edición según rol) está implementado y
-compila/testea en verde, pero **todavía no fue probado en el navegador**
-(login como GESTOR_USUARIOS, CRUD de profesor/estudiante, e intentar tocar
-una cuenta admin para confirmar que el bloqueo funciona) — confirmar en la
-próxima sesión antes de dar por cerrado.
+Lo demás de los tipos de pregunta, la nota sobre 5 / `mostrarNota`, responder
+de a una pregunta y la ficha del gestor quedó **verificado en el navegador**
+el 2026-10-21 (ver log). Sigue sin probarse el CRUD completo del rol
+GESTOR_USUARIOS (crear/editar/eliminar un profesor o estudiante e intentar
+tocar una cuenta admin para confirmar el bloqueo).
 
 ## Pendiente / próximos pasos
 
@@ -221,8 +212,8 @@ próxima sesión antes de dar por cerrado.
   "Respondido / Sin responder" del estudiante (hace 1 llamada a `mi-intento`
   por cuestionario — si un curso tiene muchos, conviene que el backend mande
   el estado en el listado), y Escape/foco en ambos overlays.
-- Escape + devolución de foco: hecho en los overlays de cuestionario; falta en
-  `ui-modal` y `lienzo`.
+- Escape + devolución de foco: hecho en los overlays de cuestionario y en
+  `ui-modal` (2026-10-21, cubre todos los modales y `confirm-dialog`); falta en `lienzo`.
 - **Páginas: API verificada, falta el navegador.** El 2026-09-30 se probaron
   con llamadas directas todos los endpoints que usa el frontend (curso 31 /
   módulo 19, profesor `marco.aguilar@cibertec.test`, estudiante
@@ -348,8 +339,41 @@ próxima sesión antes de dar por cerrado.
   la URL, y el build de desarrollo lleva localhost.
 - README de Angular reemplazado por uno real (qué es, roles, requisitos, correr
   en local, otro backend, publicar, tests).
-- **No se pudo recorrer nada en el navegador**: la sesión no tenía
-  herramientas de navegador. Sigue en "En progreso".
+- El recorrido en el navegador lo hizo Claude en Chrome (esta sesión no tenía
+  herramientas de navegador).
+- **Recorrido en el navegador (Claude en Chrome)**: A–H del prompt de prueba
+  (gestor, crear cuestionario de 3 tipos con la casilla apagada, responder de
+  a una pregunta, calificar con validación, "Nota no publicada", activar la
+  casilla, teclado, 375 px y borrado). 9 ✅ / 4 ❌. Corregido:
+  - **Decimales**: `formatearPuntaje` ahora usa coma ("3,5"), igual que la
+    nota sobre 5; el campo de puntaje de la revisión también se llena con coma.
+  - **Foco**: `ui-modal` mueve el foco adentro al abrirse (primer control del
+    cuerpo; en `confirm-dialog` es "Cancelar"), cierra con Escape y devuelve
+    el foco al cerrar (ahora con rol `dialog` y `aria-labelledby`).
+    `cuestionario-editor`: foco a "← Volver a resultados" al abrir la
+    revisión, al botón de la fila (`data-intento`) al volver, al campo de
+    puntaje después de calificar, y al enunciado (con scroll) al editar una
+    pregunta. `cuestionario-responder`: foco al mensaje del resultado al
+    finalizar.
+  - **Escape durante "Abriendo intento…"**: cancela la petición y se queda en
+    Resultados (antes cerraba todo el overlay).
+  - **Cerrar el editor ya no recarga el curso entero**: solo pide los
+    cuestionarios de ese módulo y devuelve el foco a "Preguntas y resultados"
+    (antes ~7 llamadas por módulo, "Cargando…" de 5-8 s y foco en `BODY`).
+  - **375 px**: la cabecera del editor se apila y el overlay ocupa toda la
+    pantalla. La tabla de Resultados sigue con scroll horizontal dentro de
+    su contenedor (no desborda la página).
+  - Menores: "Te falta 1 pregunta" (singular), la tarjeta "Cuestionario" del
+    selector de recursos ya no dice "solo opción múltiple", y el 403
+    esperado del gestor no se loguea como error en consola.
+- No corregido (anotado): el recorrido vio ~30 de 54 peticiones con **503**
+  al recargar el curso después de guardar; el backend no devuelve 503 en
+  ningún lado de su código y una ráfaga de 40 peticiones en paralelo con
+  curl dio 40 × 200, así que no se pudo reproducir ni atribuir. Guardar en
+  otras partes del curso sigue recargando la página completa (5-8 s). Las
+  respuestas a medio contestar no se guardan si el estudiante recarga
+  (sería una feature nueva). `.course-main` desborda 8 px a 375 px (ya
+  estaba en la lista de pendientes de responsive).
 - Para avisar al backend (sin tocarlo): CORS solo acepta
   `http://localhost:4200`; al publicar hay que sumar el dominio del front, y
   el backend tiene que estar en HTTPS.

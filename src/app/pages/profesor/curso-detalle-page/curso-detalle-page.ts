@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, Directive, OnInit, computed, inject, signal, viewChildren } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -126,6 +126,7 @@ const SIN_PADRE = 'raiz';
 })
 export class ProfesorCursoDetallePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly documento = inject(DOCUMENT);
   private readonly cursoService = inject(CursoService);
   private readonly moduloService = inject(ModuloService);
   private readonly contenidoService = inject(ContenidoService);
@@ -297,7 +298,7 @@ export class ProfesorCursoDetallePage implements OnInit {
   readonly cuestionarioAEliminar = signal<Cuestionario | null>(null);
   readonly eliminandoCuestionario = signal(false);
 
-  readonly cuestionarioEditorAbierto = signal<{ id: number; titulo: string } | null>(null);
+  readonly cuestionarioEditorAbierto = signal<{ id: number; moduloId: number } | null>(null);
 
   abrirCrearCuestionario(moduloId: number): void {
     this.moduloActivo.set(moduloId);
@@ -396,12 +397,30 @@ export class ProfesorCursoDetallePage implements OnInit {
   }
 
   abrirEditorCuestionario(cuestionario: Cuestionario): void {
-    this.cuestionarioEditorAbierto.set({ id: cuestionario.id, titulo: cuestionario.titulo });
+    this.cuestionarioEditorAbierto.set({ id: cuestionario.id, moduloId: cuestionario.moduloId });
   }
 
+  // Al cerrar el editor solo cambian los cuestionarios de ese módulo (puntaje,
+  // o que se haya eliminado): se recargan esos, no el curso entero (que son
+  // ~7 llamadas por módulo y dejaba la página en "Cargando…" varios segundos).
   cerrarEditorCuestionario(): void {
+    const abierto = this.cuestionarioEditorAbierto();
     this.cuestionarioEditorAbierto.set(null);
-    this.cargar();
+    if (!abierto) {
+      return;
+    }
+    this.cuestionarioService.listarPorModulo(abierto.moduloId).subscribe({
+      next: (cuestionarios) => {
+        this.modulos.set(
+          this.modulos().map((item) =>
+            item.modulo.id === abierto.moduloId ? { ...item, cuestionarios, cuestionariosError: false } : item,
+          ),
+        );
+        // La tarjeta se vuelve a dibujar: el foco vuelve a su botón (si el cuestionario sigue existiendo).
+        setTimeout(() => this.documento.getElementById(`cq-abrir-${abierto.id}`)?.querySelector('button')?.focus());
+      },
+      error: (err: HttpErrorResponse) => this.error.set(extraerMensajeError(err)),
+    });
   }
 
   ngOnInit(): void {

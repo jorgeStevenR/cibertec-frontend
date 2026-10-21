@@ -53,3 +53,8 @@
 .panel-body {
   padding: 24px;
 }
+
+// Recibe el foco solo como último recurso (modal sin nada enfocable): sin contorno.
+.panel:focus {
+  outline: none;
+}

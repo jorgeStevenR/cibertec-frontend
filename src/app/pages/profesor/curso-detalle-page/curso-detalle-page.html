@@ -279,7 +279,12 @@
                     </span>
                   </div>
                   <div class="cuestionario-actions">
-                    <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditorCuestionario(cq)">
+                    <ui-button
+                      [attr.id]="'cq-abrir-' + cq.id"
+                      variant="secondary"
+                      [fullWidth]="false"
+                      (pressed)="abrirEditorCuestionario(cq)"
+                    >
                       Preguntas y resultados
                     </ui-button>
                     <ui-button variant="secondary" [fullWidth]="false" (pressed)="abrirEditarCuestionario(cq)">

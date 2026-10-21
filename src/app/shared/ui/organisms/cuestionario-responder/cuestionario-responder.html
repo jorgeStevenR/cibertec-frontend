@@ -13,17 +13,17 @@
     <!-- Ya finalizó: nota y revisión, solo "en revisión", o solo la confirmación si el profesor oculta la nota -->
     <div class="cr-body" *ngIf="!cargando() && miIntento() as intento">
       <ng-container [ngSwitch]="resultado(intento)">
-        <div *ngSwitchCase="'visible'" class="cr-nota-final" role="status">
+        <div #resultado tabindex="-1" *ngSwitchCase="'visible'" class="cr-nota-final" role="status">
           Tu nota: <strong>{{ formatearNotaSobre5(intento.notaSobre5 ?? 0) }} / 5,0</strong>
           <span class="cr-nota-puntos">
             ({{ formatearPuntaje(intento.nota ?? 0) }} de {{ formatearPuntaje(intento.puntajeMaximo) }} pts)
           </span>
         </div>
-        <div *ngSwitchCase="'en-revision'" class="cr-nota-final cr-nota-pendiente" role="status">
+        <div #resultado tabindex="-1" *ngSwitchCase="'en-revision'" class="cr-nota-final cr-nota-pendiente" role="status">
           Tus respuestas se enviaron. <strong>Tu nota está pendiente</strong>: el profesor todavía tiene que calificar
           las preguntas abiertas.
         </div>
-        <div *ngSwitchCase="'oculta'" class="cr-nota-final cr-nota-pendiente" role="status">
+        <div #resultado tabindex="-1" *ngSwitchCase="'oculta'" class="cr-nota-final cr-nota-pendiente" role="status">
           <strong>Tus respuestas se enviaron.</strong> El profesor publicará la nota más adelante.
         </div>
       </ng-container>
@@ -177,9 +177,8 @@
           </button>
         </div>
         <p *ngIf="esUltima() && !puedeEnviar()" id="cr-faltan" class="cr-faltan">
-          Te faltan {{ totalPreguntas() - totalRespondidas() }}
-          {{ totalPreguntas() - totalRespondidas() === 1 ? 'pregunta' : 'preguntas' }} por responder: son las que
-          no están marcadas en la grilla de arriba.
+          {{ totalPreguntas() - totalRespondidas() === 1 ? 'Te falta 1 pregunta' : 'Te faltan ' + (totalPreguntas() - totalRespondidas()) + ' preguntas' }}
+          por responder: son las que no están marcadas en la grilla de arriba.
         </p>
       </ng-container>
     </div>

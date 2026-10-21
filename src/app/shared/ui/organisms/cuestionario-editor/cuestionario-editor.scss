@@ -571,3 +571,39 @@
   font-size: 12px;
   color: var(--text-secondary, #606770);
 }
+
+// En pantallas angostas el overlay ocupa toda la pantalla y la cabecera se
+// apila: título arriba, "Eliminar cuestionario" y "Cerrar" debajo (antes
+// "Cerrar" se salía del cuadro a 375 px).
+@media (max-width: 480px) {
+  .cq-overlay {
+    padding: 0;
+  }
+
+  .cq-panel {
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .cq-header {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+
+    > div:first-child {
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+
+    h2 {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .cq-header-actions {
+    flex: 1 1 100%;
+    flex-shrink: 1;
+    justify-content: space-between;
+  }
+}

@@ -14,6 +14,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DataTable, DataTableCellDirective, DataTableColumn } from '../data-table/data-table';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
@@ -69,6 +70,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   private readonly cuestionarioService = inject(CuestionarioService);
   private readonly fb = inject(FormBuilder);
   private readonly documento = inject(DOCUMENT);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   // Elemento que abrió el overlay, para devolverle el foco al cerrarlo.
   private readonly focoPrevio = this.documento.activeElement as HTMLElement | null;
 
@@ -97,6 +99,9 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   // --- Revisión de un intento (calificar respuestas abiertas) ---
   readonly intentoRevision = signal<IntentoDetalle | null>(null);
   readonly cargandoRevision = signal(false);
+  // Petición en curso al abrir un intento (para poder cancelarla con Escape) e id del intento.
+  private aperturaRevision?: Subscription;
+  private intentoRevisadoId: number | null = null;
   readonly errorRevision = signal('');
   // Puntaje escrito por el profesor en cada abierta, por id de pregunta (texto crudo del input).
   readonly puntajesEditados = signal<Record<number, string>>({});
@@ -143,10 +148,14 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   }
 
   // Escape cierra el overlay, salvo que haya un diálogo de confirmación encima.
-  // Si se está revisando un intento, primero vuelve a la lista de resultados.
+  // Si se está revisando un intento (o abriéndolo), primero vuelve a la lista de resultados.
   @HostListener('document:keydown.escape')
   cerrarConEscape(): void {
     if (this.confirmEliminarPreguntaAbierto() || this.confirmEliminarCuestionarioAbierto()) {
+      return;
+    }
+    if (this.cargandoRevision()) {
+      this.cancelarAperturaRevision();
       return;
     }
     if (this.intentoRevision()) {
@@ -265,6 +274,12 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
         correcta: idxCorrecta >= 0 ? idxCorrecta : null,
       },
     );
+    // El formulario aparece al final de la lista: se lleva la vista y el foco hasta él.
+    setTimeout(() => {
+      const form = this.host.nativeElement.querySelector<HTMLElement>('.cq-form-pregunta');
+      form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      form?.querySelector<HTMLElement>('#cq-enunciado')?.focus({ preventScroll: true });
+    });
   }
 
   cancelarFormulario(): void {
@@ -328,10 +343,13 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   abrirRevision(intento: IntentoResumen): void {
     this.cargandoRevision.set(true);
     this.error.set('');
-    this.cuestionarioService.obtenerIntento(intento.id).subscribe({
+    this.intentoRevisadoId = intento.id;
+    this.aperturaRevision = this.cuestionarioService.obtenerIntento(intento.id).subscribe({
       next: (detalle) => {
         this.cargandoRevision.set(false);
         this.mostrarRevision(detalle);
+        // La tabla desaparece (y con ella el botón que tenía el foco).
+        this.enfocar('.cq-volver');
       },
       error: (err: HttpErrorResponse) => {
         this.cargandoRevision.set(false);
@@ -341,8 +359,30 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
   }
 
   cerrarRevision(): void {
+    const estabaAbierta = this.intentoRevision() !== null;
     this.intentoRevision.set(null);
     this.errorRevision.set('');
+    if (estabaAbierta) {
+      this.enfocarFilaRevisada();
+    }
+  }
+
+  // Escape mientras dice "Abriendo intento…": se descarta la respuesta y se queda en Resultados.
+  private cancelarAperturaRevision(): void {
+    this.aperturaRevision?.unsubscribe();
+    this.cargandoRevision.set(false);
+    this.enfocarFilaRevisada();
+  }
+
+  // Vuelve al botón de la fila del intento que se estaba revisando.
+  private enfocarFilaRevisada(): void {
+    if (this.intentoRevisadoId !== null) {
+      this.enfocar(`[data-intento="${this.intentoRevisadoId}"]`);
+    }
+  }
+
+  private enfocar(selector: string): void {
+    setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus());
   }
 
   private mostrarRevision(detalle: IntentoDetalle): void {
@@ -350,7 +390,7 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
     const puntajes: Record<number, string> = {};
     for (const p of detalle.preguntas) {
       if (p.tipo === 'ABIERTA' && p.textoRespuesta !== null) {
-        puntajes[p.id] = p.puntajeObtenido === null ? '' : String(p.puntajeObtenido);
+        puntajes[p.id] = p.puntajeObtenido === null ? '' : formatearPuntaje(p.puntajeObtenido);
       }
     }
     this.puntajesEditados.set(puntajes);
@@ -387,6 +427,8 @@ export class CuestionarioEditorComponent implements OnInit, AfterViewInit, OnDes
       next: (actualizado) => {
         this.guardandoPuntajeDe.set(null);
         this.mostrarRevision(actualizado);
+        // El botón se deshabilitó mientras guardaba y perdió el foco: vuelve al campo del puntaje.
+        this.enfocar(`#cq-puntaje-${pregunta.id}`);
         // La lista de resultados refleja la nota y el estado nuevos sin pedirla de nuevo.
         this.intentos.set(
           this.intentos().map((i) =>

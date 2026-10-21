@@ -41,6 +41,7 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
 
   @ViewChild('botonCerrar') private botonCerrar?: ElementRef<HTMLButtonElement>;
   @ViewChild('enunciadoActual') private enunciadoActual?: ElementRef<HTMLElement>;
+  @ViewChild('resultado') private resultadoMensaje?: ElementRef<HTMLElement>;
 
   private readonly cuestionarioService = inject(CuestionarioService);
   private readonly documento = inject(DOCUMENT);
@@ -219,6 +220,8 @@ export class CuestionarioResponderComponent implements OnInit, AfterViewInit, On
         this.confirmEnviarAbierto.set(false);
         this.miIntento.set(intento);
         this.respondido.emit(intento);
+        // El formulario desaparece: el foco pasa al mensaje con el resultado.
+        setTimeout(() => this.resultadoMensaje?.nativeElement.focus());
       },
       error: (err: HttpErrorResponse) => {
         this.enviando.set(false);

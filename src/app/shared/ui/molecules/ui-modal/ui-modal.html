@@ -1,7 +1,14 @@
 <div class="backdrop" *ngIf="open()" (click)="onBackdropClick()">
-  <div class="panel" (click)="$event.stopPropagation()">
+  <div
+    class="panel"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-labelledby]="title() ? tituloId : null"
+    (click)="$event.stopPropagation()"
+  >
     <div class="panel-header" *ngIf="title()">
-      <h2>{{ title() }}</h2>
+      <h2 [id]="tituloId">{{ title() }}</h2>
       <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Cerrar">×</button>
     </div>
     <div class="panel-body">

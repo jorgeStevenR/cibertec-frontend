@@ -203,14 +203,18 @@ export class UsuarioDetallePage implements OnInit {
     forkJoin({
       matriculas: this.matriculaService.listarPorEstudiante(usuario.id).pipe(
         catchError((err: HttpErrorResponse) => {
-          console.error(`Fallo al cargar las matrículas a cursos del estudiante ${usuario.id}`, err);
+          if (err.status !== 403) {
+            console.error(`Fallo al cargar las matrículas a cursos del estudiante ${usuario.id}`, err);
+          }
           this.cursosAviso.set(avisoPertenencia(err, 'las matrículas a cursos'));
           return of([]);
         }),
       ),
       matriculasPrograma: this.matriculaProgramaService.listarPorEstudiante(usuario.id).pipe(
         catchError((err: HttpErrorResponse) => {
-          console.error(`Fallo al cargar las matrículas a programas del estudiante ${usuario.id}`, err);
+          if (err.status !== 403) {
+            console.error(`Fallo al cargar las matrículas a programas del estudiante ${usuario.id}`, err);
+          }
           this.programasAviso.set(avisoPertenencia(err, 'las matrículas a programas'));
           return of([]);
         }),

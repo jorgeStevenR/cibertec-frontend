@@ -6,9 +6,9 @@ describe('formatearPuntaje', () => {
     expect(formatearPuntaje(0)).toBe('0');
   });
 
-  it('muestra una cifra decimal cuando hace falta', () => {
-    expect(formatearPuntaje(17.5)).toBe('17.5');
-    expect(formatearPuntaje(17.25)).toBe('17.3');
+  it('muestra una cifra decimal con coma cuando hace falta', () => {
+    expect(formatearPuntaje(17.5)).toBe('17,5');
+    expect(formatearPuntaje(17.25)).toBe('17,3');
   });
 });
 

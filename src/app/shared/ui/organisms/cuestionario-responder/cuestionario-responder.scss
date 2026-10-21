@@ -400,3 +400,8 @@
     text-align: left;
   }
 }
+
+// Recibe el foco al finalizar (para lectores de pantalla), sin contorno extra.
+.cr-nota-final:focus {
+  outline: none;
+}
